@@ -470,6 +470,14 @@
         <label>備註</label>
         <textarea id="f-notes" placeholder="心得、複盤筆記..."></textarea>
       </div>
+      <div class="form-group full">
+        <label>截圖上傳</label>
+        <input type="file" id="f-image" accept="image/*" onchange="previewImage(this)">
+        <div id="image-preview" style="margin-top:8px;display:none">
+          <img id="preview-img" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
+          <button type="button" onclick="clearImage()" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除圖片</button>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal()">取消</button>
@@ -680,6 +688,7 @@ function renderTable() {
       <div class="card-actions">
         ${quickBtns}
         <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
+        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id})" style="border-color:var(--cyan);color:var(--cyan)">截圖</button>` : ''}
         <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
       </div>
     </div>`;
@@ -723,6 +732,7 @@ function renderTable() {
             <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
+          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id})" style="border-color:var(--cyan);color:var(--cyan)">截圖</button>` : ''}
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
       </td>
@@ -745,6 +755,7 @@ function openModal() {
   document.getElementById('f-status').value = '進行中';
   document.getElementById('status-group').style.display = 'none';
   document.getElementById('f-notes').value = '';
+  clearImage();
   document.getElementById('rr-calc').textContent = '--';
   setDir('LONG');
   document.getElementById('modal').classList.add('open');
@@ -769,6 +780,11 @@ function openEdit(id) {
   document.getElementById('f-notes').value = t.notes || '';
   editTradeRisk = t.risk_amount;
   editTradeRR = t.rr_ratio;
+  clearImage();
+  if (t.image_data) {
+    document.getElementById('preview-img').src = t.image_data;
+    document.getElementById('image-preview').style.display = '';
+  }
   setDir(t.direction);
   calcRR();
   document.getElementById('modal').classList.add('open');
@@ -789,6 +805,9 @@ async function submitTrade() {
     return;
   }
 
+  const imgEl = document.getElementById('preview-img');
+  const imageData = imgEl.src && imgEl.src.startsWith('data:') ? imgEl.src : (imgEl.src && imgEl.src !== window.location.href ? imgEl.src : null);
+
   const body = {
     coin,
     date: document.getElementById('f-date').value,
@@ -802,6 +821,7 @@ async function submitTrade() {
     pnl: document.getElementById('f-pnl').value || null,
     status: document.getElementById('f-status').value,
     notes: document.getElementById('f-notes').value,
+    image_data: imageData,
   };
 
   const url = editId ? `/api/trades/${editId}` : '/api/trades';
@@ -855,6 +875,29 @@ async function deleteTrade(id) {
   if (!confirm('確定刪除這筆交易紀錄？')) return;
   await fetch(`/api/trades/${id}`, { method: 'DELETE' });
   loadTrades();
+}
+
+function viewImage(id) {
+  const t = allTrades.find(x => x.id === id);
+  if (!t || !t.image_data) return;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><body style="margin:0;background:#000"><img src="${t.image_data}" style="max-width:100%;display:block"></body></html>`);
+}
+
+function previewImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('image-preview').style.display = '';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function clearImage() {
+  document.getElementById('f-image').value = '';
+  document.getElementById('preview-img').src = '';
+  document.getElementById('image-preview').style.display = 'none';
 }
 
 // Auto-fill PnL when status changes in edit modal

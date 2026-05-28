@@ -30,6 +30,7 @@ class Trade(db.Model):
     pnl = db.Column(db.Float)
     status = db.Column(db.String(20), default='進行中')
     notes = db.Column(db.Text)
+    image_data = db.Column(db.Text)
     created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
     def to_dict(self):
@@ -95,7 +96,7 @@ def update_trade(trade_id):
         d = request.json
         float_fields = {'entry_price', 'take_profit', 'stop_loss', 'risk_amount', 'pnl'}
         for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
-                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes']:
+                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes', 'image_data']:
             if field in d:
                 val = d[field]
                 if field in float_fields and val is not None:
