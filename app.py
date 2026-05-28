@@ -5,10 +5,19 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-db_url = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'trades.db')}")
-# Railway PostgreSQL URL starts with postgres://, SQLAlchemy needs postgresql://
-if db_url.startswith('postgres://'):
-    db_url = db_url.replace('postgres://', 'postgresql://', 1)
+# Try to build URL from individual PG vars (Railway auto-injects these)
+pg_host = os.environ.get('PGHOST')
+pg_port = os.environ.get('PGPORT', '5432')
+pg_user = os.environ.get('PGUSER')
+pg_password = os.environ.get('PGPASSWORD')
+pg_db = os.environ.get('PGDATABASE')
+
+if pg_host and pg_user and pg_password and pg_db:
+    db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+else:
+    db_url = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'trades.db')}")
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -52,8 +61,11 @@ def index():
 
 @app.route('/api/debug')
 def debug_db():
-    raw = os.environ.get('DATABASE_URL', 'NOT SET')
-    return jsonify({'computed': db_url[:40], 'env': raw[:40]})
+    return jsonify({
+        'computed': db_url[:40],
+        'PGHOST': os.environ.get('PGHOST', 'NOT SET'),
+        'DATABASE_URL': os.environ.get('DATABASE_URL', 'NOT SET')[:40],
+    })
 
 
 @app.route('/api/trades', methods=['GET'])
