@@ -10,7 +10,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交易紀錄">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #050a0e;
@@ -549,50 +548,10 @@ function calcRR() {
   el.style.color = rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)';
 }
 
-let pnlChart = null;
-
-function renderChart() {
-  const closed = allTrades.filter(t => t.pnl !== null && t.pnl !== undefined);
-  const wrap = document.getElementById('chart-wrap');
-  if (!closed.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
-
-  const sorted = [...closed].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-  const labels = sorted.map(t => `${t.coin} ${t.date.slice(5)}`);
-  const data = sorted.map(t => t.pnl);
-  const colors = data.map(v => v >= 0 ? 'rgba(0,255,136,0.8)' : 'rgba(255,51,102,0.8)');
-  const borders = data.map(v => v >= 0 ? '#00ff88' : '#ff3366');
-
-  if (pnlChart) pnlChart.destroy();
-  pnlChart = new Chart(document.getElementById('pnl-chart'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ data, backgroundColor: colors, borderColor: borders, borderWidth: 1, borderRadius: 3 }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => (ctx.raw >= 0 ? '+' : '') + ctx.raw + ' U'
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#6a9ab0', font: { size: 10 } }, grid: { color: 'rgba(26,58,92,0.4)' } },
-        y: { ticks: { color: '#6a9ab0', font: { size: 10 }, callback: v => v + 'U' }, grid: { color: 'rgba(26,58,92,0.4)' } }
-      }
-    }
-  });
-}
-
 async function loadTrades() {
   const res = await fetch('/api/trades');
   allTrades = await res.json();
   renderTable();
-  renderChart();
   loadStats();
 }
 
