@@ -50,6 +50,11 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/debug')
+def debug_db():
+    return jsonify({'db': db_url[:30] if db_url else 'none'})
+
+
 @app.route('/api/trades', methods=['GET'])
 def get_trades():
     trades = Trade.query.order_by(Trade.date.desc(), Trade.id.desc()).all()
