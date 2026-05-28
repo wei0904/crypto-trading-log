@@ -52,7 +52,8 @@ def index():
 
 @app.route('/api/debug')
 def debug_db():
-    return jsonify({'db': db_url[:30] if db_url else 'none'})
+    raw = os.environ.get('DATABASE_URL', 'NOT SET')
+    return jsonify({'computed': db_url[:40], 'env': raw[:40]})
 
 
 @app.route('/api/trades', methods=['GET'])
