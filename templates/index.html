@@ -584,7 +584,7 @@
     <table>
       <thead>
         <tr>
-          <th>日期</th>
+          <th>日期 / 時間</th>
           <th>幣種</th>
           <th>方向</th>
           <th>進場價</th>
@@ -592,6 +592,8 @@
           <th>止損</th>
           <th>盈虧比</th>
           <th>倉位(U)</th>
+          <th>止損金額</th>
+          <th>預期獲利</th>
           <th>條件</th>
           <th>獲利/虧損</th>
           <th>狀態</th>
@@ -599,7 +601,7 @@
         </tr>
       </thead>
       <tbody id="trade-tbody">
-        <tr><td colspan="12" class="empty-state">[ 載入中... ]</td></tr>
+        <tr><td colspan="14" class="empty-state">[ 載入中... ]</td></tr>
       </tbody>
     </table>
   </div>
@@ -617,6 +619,10 @@
       <div class="form-group">
         <label>日期</label>
         <input type="date" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>時間</label>
+        <input type="time" id="f-time" placeholder="HH:MM">
       </div>
       <div class="form-group full">
         <label>方向</label>
@@ -639,10 +645,15 @@
       </div>
       <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
         <div class="rr-preview">盈虧比 R:R = <span id="rr-calc">--</span></div>
+        <div class="rr-preview" style="margin-top:4px">預期獲利 = <span id="expected-calc" style="color:var(--green)">--</span></div>
       </div>
       <div class="form-group">
         <label>倉位 (USDT)</label>
         <input type="number" id="f-position" placeholder="例：500">
+      </div>
+      <div class="form-group">
+        <label>止損金額 (USDT)</label>
+        <input type="number" id="f-risk" placeholder="例：100" oninput="calcExpected()">
       </div>
       <div class="form-group">
         <label>進場條件 / 策略</label>
@@ -721,6 +732,15 @@ function calcRR() {
   const rr = (reward / risk).toFixed(2);
   el.textContent = `${rr}R`;
   el.style.color = rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)';
+  calcExpected();
+}
+
+function calcExpected() {
+  const rr = parseFloat(document.getElementById('rr-calc').textContent);
+  const risk = parseFloat(document.getElementById('f-risk').value);
+  const el = document.getElementById('expected-calc');
+  if (!risk || isNaN(rr)) { el.textContent = '--'; return; }
+  el.textContent = `+${(risk * rr).toFixed(1)} U`;
 }
 
 async function loadTrades() {
@@ -762,7 +782,7 @@ function renderTable() {
 
   const tbody = document.getElementById('trade-tbody');
   if (!trades.length) {
-    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="14" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
     return;
   }
 
@@ -781,8 +801,12 @@ function renderTable() {
 
     const rr = t.rr_ratio ? `<span class="rr-badge">${t.rr_ratio}R</span>` : '-';
 
+    const expected = (t.risk_amount && t.rr_ratio)
+      ? `<span style="color:var(--green)">+${(t.risk_amount * t.rr_ratio).toFixed(1)}U</span>`
+      : '-';
+
     return `<tr>
-      <td class="date-cell">${t.date}</td>
+      <td class="date-cell">${t.date}${t.trade_time ? '<br><span style="color:var(--cyan);font-size:11px">' + t.trade_time + '</span>' : ''}</td>
       <td><div class="coin-cell"><span class="coin-badge">${t.coin}</span></div></td>
       <td><span class="direction-badge ${dirClass}">${dirLabel}</span></td>
       <td class="price-cell">${t.entry_price}</td>
@@ -790,6 +814,8 @@ function renderTable() {
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
       <td>${rr}</td>
       <td class="price-cell">${t.position_size ? t.position_size + ' U' : '-'}</td>
+      <td class="price-cell" style="color:var(--red)">${t.risk_amount ? '-' + t.risk_amount + 'U' : '-'}</td>
+      <td class="price-cell">${expected}</td>
       <td class="condition-cell" title="${t.condition || ''}">${t.condition || '-'}</td>
       <td>${pnl}</td>
       <td><span class="status-badge ${statusClass}">${t.status}</span></td>
@@ -811,7 +837,10 @@ function openModal() {
   document.getElementById('f-entry').value = '';
   document.getElementById('f-tp').value = '';
   document.getElementById('f-sl').value = '';
+  document.getElementById('f-time').value = '';
   document.getElementById('f-position').value = '';
+  document.getElementById('f-risk').value = '';
+  document.getElementById('expected-calc').textContent = '--';
   document.getElementById('f-condition').value = '';
   document.getElementById('f-pnl').value = '';
   document.getElementById('f-status').value = '進行中';
@@ -831,7 +860,9 @@ function openEdit(id) {
   document.getElementById('f-entry').value = t.entry_price;
   document.getElementById('f-tp').value = t.take_profit;
   document.getElementById('f-sl').value = t.stop_loss;
+  document.getElementById('f-time').value = t.trade_time || '';
   document.getElementById('f-position').value = t.position_size ?? '';
+  document.getElementById('f-risk').value = t.risk_amount ?? '';
   document.getElementById('f-condition').value = t.condition || '';
   document.getElementById('f-pnl').value = t.pnl ?? '';
   document.getElementById('f-status').value = t.status;
@@ -863,7 +894,9 @@ async function submitTrade() {
     entry_price: entry,
     take_profit: tp,
     stop_loss: sl,
+    trade_time: document.getElementById('f-time').value || null,
     position_size: document.getElementById('f-position').value || null,
+    risk_amount: document.getElementById('f-risk').value || null,
     condition: document.getElementById('f-condition').value,
     pnl: document.getElementById('f-pnl').value || null,
     status: document.getElementById('f-status').value,
