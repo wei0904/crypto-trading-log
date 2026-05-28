@@ -464,7 +464,7 @@
         <textarea id="f-notes" placeholder="心得、複盤筆記..."></textarea>
       </div>
       <div class="form-group full">
-        <label>截圖 1</label>
+        <label>規劃</label>
         <input type="file" id="f-image" accept="image/*" onchange="previewImage(this, 'preview-img', 'image-preview')">
         <div id="image-preview" style="margin-top:8px;display:none">
           <img id="preview-img" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
@@ -472,7 +472,7 @@
         </div>
       </div>
       <div class="form-group full">
-        <label>截圖 2</label>
+        <label>盈虧</label>
         <input type="file" id="f-image2" accept="image/*" onchange="previewImage(this, 'preview-img2', 'image-preview2')">
         <div id="image-preview2" style="margin-top:8px;display:none">
           <img id="preview-img2" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
@@ -649,8 +649,8 @@ function renderTable() {
       <div class="card-actions">
         ${quickBtns}
         <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">截圖1</button>` : ''}
-        ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">截圖2</button>` : ''}
+        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
+        ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
         <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
       </div>
     </div>`;
@@ -694,8 +694,8 @@ function renderTable() {
             <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">截圖1</button>` : ''}
-          ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">截圖2</button>` : ''}
+          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
+          ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
       </td>
