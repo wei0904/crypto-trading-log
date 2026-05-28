@@ -5,10 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-_default_db = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway'
-db_url = os.environ.get('DATABASE_URL', _default_db)
-if db_url.startswith('postgres://'):
-    db_url = db_url.replace('postgres://', 'postgresql://', 1)
+db_url = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
