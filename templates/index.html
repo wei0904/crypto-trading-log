@@ -493,6 +493,8 @@ let allTrades = [];
 let currentFilter = 'ALL';
 let editId = null;
 let currentDir = 'LONG';
+let editTradeRisk = null;
+let editTradeRR = null;
 
 // Live clock
 function updateClock() {
@@ -718,6 +720,8 @@ function openEdit(id) {
   document.getElementById('f-status').value = t.status;
   document.getElementById('status-group').style.display = '';
   document.getElementById('f-notes').value = t.notes || '';
+  editTradeRisk = t.risk_amount;
+  editTradeRR = t.rr_ratio;
   setDir(t.direction);
   calcRR();
   document.getElementById('modal').classList.add('open');
@@ -805,6 +809,16 @@ async function deleteTrade(id) {
   await fetch(`/api/trades/${id}`, { method: 'DELETE' });
   loadTrades();
 }
+
+// Auto-fill PnL when status changes in edit modal
+document.getElementById('f-status').addEventListener('change', function() {
+  const pnlField = document.getElementById('f-pnl');
+  if (this.value === '止盈' && editTradeRisk && editTradeRR) {
+    pnlField.value = parseFloat((editTradeRisk * editTradeRR).toFixed(2));
+  } else if (this.value === '止損' && editTradeRisk) {
+    pnlField.value = parseFloat((-editTradeRisk).toFixed(2));
+  }
+});
 
 // Close modal on overlay click
 document.getElementById('modal').addEventListener('click', function(e) {
