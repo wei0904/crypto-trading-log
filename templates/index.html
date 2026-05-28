@@ -605,13 +605,6 @@
     </div>
   </div>
 
-  <!-- Trader Tabs -->
-  <div class="trader-tabs">
-    <button class="trader-tab active" onclick="setTrader('全部', this)">全部</button>
-    <button class="trader-tab" onclick="setTrader('我', this)">我的交易紀錄</button>
-    <button class="trader-tab" onclick="setTrader('wei', this)">wei的交易紀錄</button>
-  </div>
-
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
@@ -666,13 +659,6 @@
       <div class="form-group">
         <label>時間</label>
         <input type="time" id="f-time" placeholder="HH:MM">
-      </div>
-      <div class="form-group full">
-        <label>交易者</label>
-        <div class="direction-toggle">
-          <button class="dir-btn long active" id="trader-me" onclick="setTraderForm('我')">我</button>
-          <button class="dir-btn short" id="trader-wei" onclick="setTraderForm('wei')">wei</button>
-        </div>
       </div>
       <div class="form-group full">
         <label>方向</label>
