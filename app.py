@@ -27,7 +27,6 @@ class Trade(db.Model):
     stop_loss = db.Column(db.Float, nullable=False)
     rr_ratio = db.Column(db.Float)
     trade_time = db.Column(db.String(10))
-    risk_amount = db.Column(db.Float)
     condition = db.Column(db.Text)
     pnl = db.Column(db.Float)
     status = db.Column(db.String(20), default='進行中')
@@ -68,7 +67,6 @@ def add_trade():
         stop_loss=sl,
         rr_ratio=calc_rr(entry, tp, sl, d['direction']),
         trade_time=d.get('trade_time', ''),
-        risk_amount=d.get('risk_amount'),
         condition=d.get('condition', ''),
         pnl=d.get('pnl'),
         status=d.get('status', '進行中'),
@@ -84,8 +82,7 @@ def update_trade(trade_id):
     trade = Trade.query.get_or_404(trade_id)
     d = request.json
     for field in ['date', 'coin', 'direction', 'entry_price', 'take_profit',
-                  'stop_loss', 'trade_time', 'risk_amount',
-                  'condition', 'pnl', 'status', 'notes']:
+                  'stop_loss', 'trade_time', 'condition', 'pnl', 'status', 'notes']:
         if field in d:
             setattr(trade, field, d[field])
     trade.rr_ratio = calc_rr(trade.entry_price, trade.take_profit, trade.stop_loss, trade.direction)
@@ -105,8 +102,8 @@ def delete_trade(trade_id):
 def get_stats():
     trades = Trade.query.all()
     closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
-    wins = [t for t in closed if t.pnl and t.pnl > 0]
-    losses = [t for t in closed if t.pnl and t.pnl < 0]
+    wins = [t for t in trades if t.status == '止盈']
+    losses = [t for t in trades if t.status == '止損']
     total_pnl = sum(t.pnl for t in closed if t.pnl)
     win_rate = round(len(wins) / len(closed) * 100, 1) if closed else 0
     rr_vals = [t.rr_ratio for t in trades if t.rr_ratio]
