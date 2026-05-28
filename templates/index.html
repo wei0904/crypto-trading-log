@@ -368,6 +368,8 @@
   .action-btn.tp:hover { background: rgba(0,255,136,0.15); box-shadow: var(--glow-green); }
   .action-btn.sl { border-color: var(--red); color: var(--red); }
   .action-btn.sl:hover { background: rgba(255,51,102,0.15); box-shadow: var(--glow-red); }
+  .action-btn.close { border-color: var(--yellow); color: var(--yellow); }
+  .action-btn.close:hover { background: rgba(255,215,0,0.15); box-shadow: 0 0 8px rgba(255,215,0,0.6); }
 
   .empty-state {
     text-align: center;
@@ -812,6 +814,7 @@ function renderTable() {
           ${t.status === '進行中' ? `
             <button class="action-btn tp" onclick="quickClose(${t.id}, '止盈')">止盈</button>
             <button class="action-btn sl" onclick="quickClose(${t.id}, '止損')">止損</button>
+            <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
@@ -901,6 +904,19 @@ async function submitTrade() {
   });
 
   closeModal();
+  loadTrades();
+}
+
+async function quickManual(id) {
+  const input = prompt('請輸入獲利/虧損金額（虧損請加負號，例：-50）');
+  if (input === null) return;
+  const pnl = parseFloat(input);
+  if (isNaN(pnl)) { alert('請輸入有效數字'); return; }
+  await fetch(`/api/trades/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: '已平倉', pnl }),
+  });
   loadTrades();
 }
 
