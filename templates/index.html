@@ -450,7 +450,15 @@
         <label>獲利/虧損 (USDT)</label>
         <input type="number" id="f-pnl" placeholder="結算後填入">
       </div>
-      <input type="hidden" id="f-status" value="進行中">
+      <div class="form-group" id="status-group" style="display:none">
+        <label>狀態</label>
+        <select id="f-status">
+          <option value="進行中">進行中</option>
+          <option value="止盈">止盈</option>
+          <option value="止損">止損</option>
+          <option value="已平倉">已平倉</option>
+        </select>
+      </div>
       <div class="form-group full">
         <label>備註</label>
         <textarea id="f-notes" placeholder="心得、複盤筆記..."></textarea>
@@ -686,6 +694,7 @@ function openModal() {
   document.getElementById('f-condition').value = '';
   document.getElementById('f-pnl').value = '';
   document.getElementById('f-status').value = '進行中';
+  document.getElementById('status-group').style.display = 'none';
   document.getElementById('f-notes').value = '';
   document.getElementById('rr-calc').textContent = '--';
   setDir('LONG');
@@ -707,6 +716,7 @@ function openEdit(id) {
   document.getElementById('f-condition').value = t.condition || '';
   document.getElementById('f-pnl').value = t.pnl ?? '';
   document.getElementById('f-status').value = t.status;
+  document.getElementById('status-group').style.display = '';
   document.getElementById('f-notes').value = t.notes || '';
   setDir(t.direction);
   calcRR();
