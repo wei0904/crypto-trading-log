@@ -718,8 +718,6 @@
 <script>
 let allTrades = [];
 let currentFilter = 'ALL';
-let currentTrader = '全部';
-let currentTraderForm = '我';
 let editId = null;
 let currentDir = 'LONG';
 
@@ -774,25 +772,8 @@ async function loadTrades() {
   loadStats();
 }
 
-function setTrader(trader, btn) {
-  currentTrader = trader;
-  document.querySelectorAll('.trader-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  loadTrades();
-  loadStats();
-}
-
-function setTraderForm(trader) {
-  currentTraderForm = trader;
-  document.getElementById('trader-me').classList.toggle('active', trader === '我');
-  document.getElementById('trader-me').classList.toggle('long', trader === '我');
-  document.getElementById('trader-wei').classList.toggle('active', trader === 'wei');
-  document.getElementById('trader-wei').classList.toggle('short', trader === 'wei');
-}
-
 async function loadStats() {
-  const q = currentTrader !== '全部' ? `?trader=${encodeURIComponent(currentTrader)}` : '';
-  const res = await fetch('/api/stats' + q);
+  const res = await fetch('/api/stats');
   const s = await res.json();
   document.getElementById('stat-total').textContent = s.total;
   document.getElementById('stat-active').textContent = s.active;
@@ -817,8 +798,7 @@ function setFilter(f, btn) {
 }
 
 function renderTable() {
-  let trades = currentTrader === '全部' ? allTrades : allTrades.filter(t => t.trader === currentTrader);
-  if (currentFilter !== 'ALL') trades = trades.filter(t => t.status === currentFilter);
+  const trades = currentFilter === 'ALL' ? allTrades : allTrades.filter(t => t.status === currentFilter);
 
   const tbody = document.getElementById('trade-tbody');
   if (!trades.length) {
@@ -876,7 +856,6 @@ function openModal() {
   document.getElementById('f-entry').value = '';
   document.getElementById('f-tp').value = '';
   document.getElementById('f-sl').value = '';
-  setTraderForm(currentTrader !== '全部' ? currentTrader : '我');
   document.getElementById('f-time').value = '';
   document.getElementById('f-risk').value = '';
   document.getElementById('f-condition').value = '';
@@ -904,7 +883,6 @@ function openEdit(id) {
   document.getElementById('f-pnl').value = t.pnl ?? '';
   document.getElementById('f-status').value = t.status;
   document.getElementById('f-notes').value = t.notes || '';
-  setTraderForm(t.trader || '我');
   setDir(t.direction);
   calcRR();
   document.getElementById('modal').classList.add('open');
@@ -926,7 +904,6 @@ async function submitTrade() {
   }
 
   const body = {
-    trader: currentTraderForm,
     coin,
     date: document.getElementById('f-date').value,
     direction: currentDir,
