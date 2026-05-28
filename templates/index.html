@@ -726,6 +726,7 @@ function calcRR() {
   const rr = (reward / risk).toFixed(2);
   el.textContent = `${rr}R`;
   el.style.color = rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)';
+}
 
 async function loadTrades() {
   const res = await fetch('/api/trades');
