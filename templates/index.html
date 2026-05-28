@@ -237,6 +237,50 @@
   .date-cell { color: var(--text2); font-size: 11px; }
   .price-cell { color: var(--text); font-size: 12px; }
   .condition-cell { color: var(--text2); font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+
+    header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 0 18px; margin-bottom: 16px; }
+    .header-time { align-self: flex-end; }
+    #live-time { font-size: 15px; }
+    .logo h1 { font-size: 18px; letter-spacing: 2px; }
+    .logo-icon { width: 34px; height: 34px; font-size: 16px; }
+
+    .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat-card { padding: 10px 12px; }
+    .stat-value { font-size: 18px; }
+    .stat-label { font-size: 9px; }
+
+    .toolbar { gap: 8px; }
+    .btn { padding: 8px 14px; font-size: 11px; letter-spacing: 1px; }
+    .filter-group { margin-left: 0; flex-wrap: wrap; }
+    .filter-btn { padding: 5px 10px; font-size: 10px; }
+
+    .table-wrap { border-radius: 8px; overflow-x: auto; }
+    table { min-width: 700px; }
+
+    thead th { padding: 10px 10px; font-size: 9px; }
+    thead th:first-child { padding-left: 12px; }
+    td { padding: 11px 10px; font-size: 12px; }
+    td:first-child { padding-left: 12px; }
+
+    .coin-icon { width: 22px; height: 22px; }
+    .coin-icon-fallback { width: 22px; height: 22px; font-size: 8px; }
+    .coin-badge { font-size: 13px; min-width: 45px; }
+
+    .action-btns { gap: 4px; }
+    .action-btn { padding: 4px 7px; font-size: 10px; }
+
+    .modal { padding: 20px; margin: 12px; max-width: calc(100% - 24px); }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
 </head>
 <body>
