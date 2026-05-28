@@ -399,6 +399,11 @@
   </div>
 </div>
 
+<!-- Image Lightbox -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;align-items:center;justify-content:center;" onclick="closeLightbox()">
+  <img id="lightbox-img" style="max-width:95vw;max-height:95vh;border-radius:6px;object-fit:contain">
+</div>
+
 <!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
@@ -853,8 +858,13 @@ function viewImage(id, num) {
   const t = allTrades.find(x => x.id === id);
   const src = num === 2 ? t.image_data2 : t.image_data;
   if (!t || !src) return;
-  const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000"><img src="${src}" style="max-width:100%;display:block"></body></html>`);
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.style.display = 'flex';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
 }
 
 function previewImage(input, previewId, wrapId) {
