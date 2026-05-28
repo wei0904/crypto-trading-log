@@ -15,7 +15,7 @@ pg_db = os.environ.get('PGDATABASE')
 if pg_host and pg_user and pg_password and pg_db:
     db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
 else:
-    db_url = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'trades.db')}")
+    db_url = os.environ.get('TRADE_DB_URL') or os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'trades.db')}")
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
@@ -64,6 +64,7 @@ def debug_db():
     return jsonify({
         'computed': db_url[:40],
         'PGHOST': os.environ.get('PGHOST', 'NOT SET'),
+        'TRADE_DB_URL': os.environ.get('TRADE_DB_URL', 'NOT SET')[:40],
         'DATABASE_URL': os.environ.get('DATABASE_URL', 'NOT SET')[:40],
     })
 
