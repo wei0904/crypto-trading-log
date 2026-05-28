@@ -238,42 +238,73 @@
   .price-cell { color: var(--text); font-size: 12px; }
   .condition-cell { color: var(--text2); font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* Mobile */
+  /* Mobile cards */
+  .trade-cards { display: none; }
+
   @media (max-width: 768px) {
     .container { padding: 12px; }
 
-    header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 0 18px; margin-bottom: 16px; }
-    .header-time { align-self: flex-end; }
+    header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 0 16px; margin-bottom: 16px; }
+    .header-time { align-self: flex-end; margin-top: -36px; }
     #live-time { font-size: 15px; }
-    .logo h1 { font-size: 18px; letter-spacing: 2px; }
-    .logo-icon { width: 34px; height: 34px; font-size: 16px; }
+    .logo h1 { font-size: 17px; letter-spacing: 2px; }
+    .logo-icon { width: 32px; height: 32px; font-size: 15px; }
+    .logo span { font-size: 10px; }
 
-    .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
     .stat-card { padding: 10px 12px; }
-    .stat-value { font-size: 18px; }
+    .stat-value { font-size: 20px; }
     .stat-label { font-size: 9px; }
 
-    .toolbar { gap: 8px; }
-    .btn { padding: 8px 14px; font-size: 11px; letter-spacing: 1px; }
-    .filter-group { margin-left: 0; flex-wrap: wrap; }
-    .filter-btn { padding: 5px 10px; font-size: 10px; }
+    .toolbar { gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 9px 16px; font-size: 12px; letter-spacing: 1px; flex: 1; text-align: center; }
+    .filter-group { margin-left: 0; width: 100%; justify-content: space-between; }
+    .filter-btn { padding: 7px 0; font-size: 11px; flex: 1; text-align: center; }
 
-    .table-wrap { border-radius: 8px; overflow-x: auto; }
-    table { min-width: 700px; }
+    /* Hide table, show cards on mobile */
+    .table-wrap { display: none; }
+    .trade-cards { display: flex; flex-direction: column; gap: 10px; }
 
-    thead th { padding: 10px 10px; font-size: 9px; }
-    thead th:first-child { padding-left: 12px; }
-    td { padding: 11px 10px; font-size: 12px; }
-    td:first-child { padding-left: 12px; }
+    .trade-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .trade-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    }
 
-    .coin-icon { width: 22px; height: 22px; }
-    .coin-icon-fallback { width: 22px; height: 22px; font-size: 8px; }
-    .coin-badge { font-size: 13px; min-width: 45px; }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+    }
+    .card-coin { display: flex; align-items: center; gap: 8px; }
+    .card-coin img, .card-coin .coin-icon-fallback { width: 28px; height: 28px; }
+    .card-coin .coin-badge { font-size: 16px; }
+    .card-badges { display: flex; gap: 6px; align-items: center; }
 
-    .action-btns { gap: 4px; }
-    .action-btn { padding: 4px 7px; font-size: 10px; }
+    .card-prices {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; margin-bottom: 10px;
+      background: var(--bg3); border-radius: 6px; padding: 10px;
+    }
+    .card-price-item { text-align: center; }
+    .card-price-label { font-size: 9px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+    .card-price-val { font-size: 13px; font-weight: bold; }
 
-    .modal { padding: 20px; margin: 12px; max-width: calc(100% - 24px); }
+    .card-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: var(--text2); margin-bottom: 10px;
+    }
+
+    .card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .card-actions .action-btn { flex: 1; text-align: center; padding: 7px 4px; font-size: 11px; }
+
+    .modal { padding: 20px; margin: 12px; max-width: calc(100% - 24px); max-height: 85vh; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
   }
@@ -343,6 +374,9 @@
       <button class="filter-btn" onclick="setFilter('已平倉', this)">已平倉</button>
     </div>
   </div>
+
+  <!-- Mobile cards -->
+  <div class="trade-cards" id="trade-cards"></div>
 
   <!-- Table -->
   <div class="table-wrap">
@@ -520,10 +554,70 @@ function renderTable() {
   const trades = currentFilter === 'ALL' ? allTrades : allTrades.filter(t => t.status === currentFilter);
 
   const tbody = document.getElementById('trade-tbody');
+  const cards = document.getElementById('trade-cards');
+
   if (!trades.length) {
     tbody.innerHTML = `<tr><td colspan="12" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
+    cards.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2);letter-spacing:2px;font-size:13px">[ 暫無交易紀錄 ]</div>`;
     return;
   }
+
+  // Render mobile cards
+  cards.innerHTML = trades.map(t => {
+    const dirClass = t.direction === 'LONG' ? 'long' : 'short';
+    const dirLabel = t.direction === 'LONG' ? '做多' : '做空';
+    let statusClass = 'active';
+    if (t.status === '止盈') statusClass = 'win';
+    else if (t.status === '止損') statusClass = 'loss';
+    else if (t.status === '已平倉') statusClass = 'closed';
+    const pnlHtml = t.pnl !== null && t.pnl !== undefined
+      ? `<span class="${t.pnl > 0 ? 'pnl-positive' : t.pnl < 0 ? 'pnl-negative' : 'pnl-null'}">${t.pnl > 0 ? '+' : ''}${t.pnl} U</span>`
+      : '';
+    const iconUrl = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${t.coin.toLowerCase()}.svg`;
+    const quickBtns = t.status === '進行中' ? `
+      <button class="action-btn tp" onclick="quickClose(${t.id}, '止盈')">止盈</button>
+      <button class="action-btn sl" onclick="quickClose(${t.id}, '止損')">止損</button>
+      <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>` : '';
+    return `<div class="trade-card">
+      <div class="card-header">
+        <div class="card-coin">
+          <img class="coin-icon" src="${iconUrl}" alt="${t.coin}"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="coin-icon-fallback" style="display:none">${t.coin.slice(0,2)}</div>
+          <span class="coin-badge">${t.coin}</span>
+          <span class="direction-badge ${dirClass}">${dirLabel}</span>
+        </div>
+        <div class="card-badges">
+          <span class="status-badge ${statusClass}">${t.status}</span>
+        </div>
+      </div>
+      <div class="card-prices">
+        <div class="card-price-item">
+          <div class="card-price-label">進場價</div>
+          <div class="card-price-val">${t.entry_price}</div>
+        </div>
+        <div class="card-price-item">
+          <div class="card-price-label">止盈</div>
+          <div class="card-price-val" style="color:var(--green)">${t.take_profit}</div>
+        </div>
+        <div class="card-price-item">
+          <div class="card-price-label">止損</div>
+          <div class="card-price-val" style="color:var(--red)">${t.stop_loss}</div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span>${t.date}${t.trade_time ? ' ' + t.trade_time : ''}</span>
+        <span>${t.rr_ratio ? '<span class="rr-badge">' + t.rr_ratio + 'R</span>' : ''}${t.risk_amount ? ' &nbsp;止損 ' + t.risk_amount + 'U' : ''}</span>
+        <span>${pnlHtml}</span>
+      </div>
+      ${t.condition ? `<div style="font-size:11px;color:var(--text2);margin-bottom:10px">${t.condition}</div>` : ''}
+      <div class="card-actions">
+        ${quickBtns}
+        <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
+        <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
 
   tbody.innerHTML = trades.map(t => {
     const dirClass = t.direction === 'LONG' ? 'long' : 'short';
