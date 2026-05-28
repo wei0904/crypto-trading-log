@@ -61,12 +61,8 @@ def index():
 
 @app.route('/api/debug')
 def debug_db():
-    return jsonify({
-        'computed': db_url[:40],
-        'PGHOST': os.environ.get('PGHOST', 'NOT SET'),
-        'TRADE_DB_URL': os.environ.get('TRADE_DB_URL', 'NOT SET')[:40],
-        'DATABASE_URL': os.environ.get('DATABASE_URL', 'NOT SET')[:40],
-    })
+    keys = [k for k in os.environ if not k.startswith('PATH') and 'SECRET' not in k and 'PASSWORD' not in k]
+    return jsonify({'computed': db_url[:40], 'env_keys': sorted(keys)})
 
 
 @app.route('/api/trades', methods=['GET'])
