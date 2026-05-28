@@ -350,7 +350,7 @@
   .pnl-negative { color: var(--red); font-weight: bold; text-shadow: var(--glow-red); }
   .pnl-null { color: var(--text2); }
 
-  .action-btns { display: flex; gap: 6px; }
+  .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   .action-btn {
     padding: 4px 10px;
     border: 1px solid var(--border);
@@ -364,6 +364,10 @@
   }
   .action-btn:hover { border-color: var(--cyan); color: var(--cyan); }
   .action-btn.del:hover { border-color: var(--red); color: var(--red); }
+  .action-btn.tp { border-color: var(--green); color: var(--green); }
+  .action-btn.tp:hover { background: rgba(0,255,136,0.15); box-shadow: var(--glow-green); }
+  .action-btn.sl { border-color: var(--red); color: var(--red); }
+  .action-btn.sl:hover { background: rgba(255,51,102,0.15); box-shadow: var(--glow-red); }
 
   .empty-state {
     text-align: center;
@@ -799,6 +803,10 @@ function renderTable() {
       <td><span class="status-badge ${statusClass}">${t.status}</span></td>
       <td>
         <div class="action-btns">
+          ${t.status === '進行中' ? `
+            <button class="action-btn tp" onclick="quickClose(${t.id}, '止盈')">止盈</button>
+            <button class="action-btn sl" onclick="quickClose(${t.id}, '止損')">止損</button>
+          ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
@@ -884,6 +892,15 @@ async function submitTrade() {
   });
 
   closeModal();
+  loadTrades();
+}
+
+async function quickClose(id, status) {
+  await fetch(`/api/trades/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
   loadTrades();
 }
 
