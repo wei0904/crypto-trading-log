@@ -26,7 +26,6 @@ class Trade(db.Model):
     take_profit = db.Column(db.Float, nullable=False)
     stop_loss = db.Column(db.Float, nullable=False)
     rr_ratio = db.Column(db.Float)
-    position_size = db.Column(db.Float)
     trade_time = db.Column(db.String(10))
     risk_amount = db.Column(db.Float)
     condition = db.Column(db.Text)
@@ -68,7 +67,6 @@ def add_trade():
         take_profit=tp,
         stop_loss=sl,
         rr_ratio=calc_rr(entry, tp, sl, d['direction']),
-        position_size=d.get('position_size'),
         trade_time=d.get('trade_time', ''),
         risk_amount=d.get('risk_amount'),
         condition=d.get('condition', ''),
@@ -86,7 +84,7 @@ def update_trade(trade_id):
     trade = Trade.query.get_or_404(trade_id)
     d = request.json
     for field in ['date', 'coin', 'direction', 'entry_price', 'take_profit',
-                  'stop_loss', 'position_size', 'trade_time', 'risk_amount',
+                  'stop_loss', 'trade_time', 'risk_amount',
                   'condition', 'pnl', 'status', 'notes']:
         if field in d:
             setattr(trade, field, d[field])

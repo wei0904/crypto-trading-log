@@ -591,7 +591,6 @@
           <th>止盈</th>
           <th>止損</th>
           <th>盈虧比</th>
-          <th>倉位(U)</th>
           <th>止損金額</th>
           <th>預期獲利</th>
           <th>條件</th>
@@ -601,7 +600,7 @@
         </tr>
       </thead>
       <tbody id="trade-tbody">
-        <tr><td colspan="14" class="empty-state">[ 載入中... ]</td></tr>
+        <tr><td colspan="13" class="empty-state">[ 載入中... ]</td></tr>
       </tbody>
     </table>
   </div>
@@ -646,10 +645,6 @@
       <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
         <div class="rr-preview">盈虧比 R:R = <span id="rr-calc">--</span></div>
         <div class="rr-preview" style="margin-top:4px">預期獲利 = <span id="expected-calc" style="color:var(--green)">--</span></div>
-      </div>
-      <div class="form-group">
-        <label>倉位 (USDT)</label>
-        <input type="number" id="f-position" placeholder="例：500">
       </div>
       <div class="form-group">
         <label>止損金額 (USDT)</label>
@@ -782,7 +777,7 @@ function renderTable() {
 
   const tbody = document.getElementById('trade-tbody');
   if (!trades.length) {
-    tbody.innerHTML = `<tr><td colspan="14" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
     return;
   }
 
@@ -813,7 +808,6 @@ function renderTable() {
       <td class="price-cell" style="color:var(--green)">${t.take_profit}</td>
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
       <td>${rr}</td>
-      <td class="price-cell">${t.position_size ? t.position_size + ' U' : '-'}</td>
       <td class="price-cell" style="color:var(--red)">${t.risk_amount ? '-' + t.risk_amount + 'U' : '-'}</td>
       <td class="price-cell">${expected}</td>
       <td class="condition-cell" title="${t.condition || ''}">${t.condition || '-'}</td>
@@ -838,7 +832,6 @@ function openModal() {
   document.getElementById('f-tp').value = '';
   document.getElementById('f-sl').value = '';
   document.getElementById('f-time').value = '';
-  document.getElementById('f-position').value = '';
   document.getElementById('f-risk').value = '';
   document.getElementById('expected-calc').textContent = '--';
   document.getElementById('f-condition').value = '';
@@ -861,7 +854,6 @@ function openEdit(id) {
   document.getElementById('f-tp').value = t.take_profit;
   document.getElementById('f-sl').value = t.stop_loss;
   document.getElementById('f-time').value = t.trade_time || '';
-  document.getElementById('f-position').value = t.position_size ?? '';
   document.getElementById('f-risk').value = t.risk_amount ?? '';
   document.getElementById('f-condition').value = t.condition || '';
   document.getElementById('f-pnl').value = t.pnl ?? '';
@@ -895,7 +887,6 @@ async function submitTrade() {
     take_profit: tp,
     stop_loss: sl,
     trade_time: document.getElementById('f-time').value || null,
-    position_size: document.getElementById('f-position').value || null,
     risk_amount: document.getElementById('f-risk').value || null,
     condition: document.getElementById('f-condition').value,
     pnl: document.getElementById('f-pnl').value || null,
