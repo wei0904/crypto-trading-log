@@ -83,15 +83,19 @@ def add_trade():
 
 @app.route('/api/trades/<int:trade_id>', methods=['PUT'])
 def update_trade(trade_id):
-    trade = Trade.query.get_or_404(trade_id)
-    d = request.json
-    for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
-                  'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes']:
-        if field in d:
-            setattr(trade, field, d[field])
-    trade.rr_ratio = calc_rr(trade.entry_price, trade.take_profit, trade.stop_loss, trade.direction)
-    db.session.commit()
-    return jsonify(trade.to_dict())
+    try:
+        trade = Trade.query.get_or_404(trade_id)
+        d = request.json
+        for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
+                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes']:
+            if field in d:
+                setattr(trade, field, d[field])
+        trade.rr_ratio = calc_rr(trade.entry_price, trade.take_profit, trade.stop_loss, trade.direction)
+        db.session.commit()
+        return jsonify(trade.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return str(e), 500
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['DELETE'])
