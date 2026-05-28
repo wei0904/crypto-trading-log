@@ -359,12 +359,6 @@
     </div>
   </div>
 
-  <!-- PnL Chart -->
-  <div id="chart-wrap" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;position:relative;">
-    <div style="font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:12px">每筆交易盈虧</div>
-    <canvas id="pnl-chart" height="120"></canvas>
-  </div>
-
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
@@ -888,8 +882,19 @@ function previewImage(input) {
   if (!input.files || !input.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('preview-img').src = e.target.result;
-    document.getElementById('image-preview').style.display = '';
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 1200;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.75);
+      document.getElementById('preview-img').src = compressed;
+      document.getElementById('image-preview').style.display = '';
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
