@@ -464,11 +464,19 @@
         <textarea id="f-notes" placeholder="心得、複盤筆記..."></textarea>
       </div>
       <div class="form-group full">
-        <label>截圖上傳</label>
-        <input type="file" id="f-image" accept="image/*" onchange="previewImage(this)">
+        <label>截圖 1</label>
+        <input type="file" id="f-image" accept="image/*" onchange="previewImage(this, 'preview-img', 'image-preview')">
         <div id="image-preview" style="margin-top:8px;display:none">
           <img id="preview-img" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
-          <button type="button" onclick="clearImage()" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除圖片</button>
+          <button type="button" onclick="clearImage('f-image','preview-img','image-preview')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>截圖 2</label>
+        <input type="file" id="f-image2" accept="image/*" onchange="previewImage(this, 'preview-img2', 'image-preview2')">
+        <div id="image-preview2" style="margin-top:8px;display:none">
+          <img id="preview-img2" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
+          <button type="button" onclick="clearImage('f-image2','preview-img2','image-preview2')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
         </div>
       </div>
     </div>
@@ -641,7 +649,8 @@ function renderTable() {
       <div class="card-actions">
         ${quickBtns}
         <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id})" style="border-color:var(--cyan);color:var(--cyan)">截圖</button>` : ''}
+        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">截圖1</button>` : ''}
+        ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">截圖2</button>` : ''}
         <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
       </div>
     </div>`;
@@ -685,7 +694,8 @@ function renderTable() {
             <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id})" style="border-color:var(--cyan);color:var(--cyan)">截圖</button>` : ''}
+          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">截圖1</button>` : ''}
+          ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">截圖2</button>` : ''}
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
       </td>
@@ -708,7 +718,8 @@ function openModal() {
   document.getElementById('f-status').value = '進行中';
   document.getElementById('status-group').style.display = 'none';
   document.getElementById('f-notes').value = '';
-  clearImage();
+  clearImage('f-image','preview-img','image-preview');
+  clearImage('f-image2','preview-img2','image-preview2');
   document.getElementById('rr-calc').textContent = '--';
   setDir('LONG');
   document.getElementById('modal').classList.add('open');
@@ -733,10 +744,15 @@ function openEdit(id) {
   document.getElementById('f-notes').value = t.notes || '';
   editTradeRisk = t.risk_amount;
   editTradeRR = t.rr_ratio;
-  clearImage();
+  clearImage('f-image','preview-img','image-preview');
+  clearImage('f-image2','preview-img2','image-preview2');
   if (t.image_data) {
     document.getElementById('preview-img').src = t.image_data;
     document.getElementById('image-preview').style.display = '';
+  }
+  if (t.image_data2) {
+    document.getElementById('preview-img2').src = t.image_data2;
+    document.getElementById('image-preview2').style.display = '';
   }
   setDir(t.direction);
   calcRR();
@@ -759,7 +775,9 @@ async function submitTrade() {
   }
 
   const imgEl = document.getElementById('preview-img');
-  const imageData = imgEl.src && imgEl.src.startsWith('data:') ? imgEl.src : (imgEl.src && imgEl.src !== window.location.href ? imgEl.src : null);
+  const imgEl2 = document.getElementById('preview-img2');
+  const imageData = imgEl.src && (imgEl.src.startsWith('data:') || imgEl.src.startsWith('http')) ? imgEl.src : null;
+  const imageData2 = imgEl2.src && (imgEl2.src.startsWith('data:') || imgEl2.src.startsWith('http')) ? imgEl2.src : null;
 
   const body = {
     coin,
@@ -775,6 +793,7 @@ async function submitTrade() {
     status: document.getElementById('f-status').value,
     notes: document.getElementById('f-notes').value,
     image_data: imageData,
+    image_data2: imageData2,
   };
 
   const url = editId ? `/api/trades/${editId}` : '/api/trades';
@@ -830,14 +849,15 @@ async function deleteTrade(id) {
   loadTrades();
 }
 
-function viewImage(id) {
+function viewImage(id, num) {
   const t = allTrades.find(x => x.id === id);
-  if (!t || !t.image_data) return;
+  const src = num === 2 ? t.image_data2 : t.image_data;
+  if (!t || !src) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000"><img src="${t.image_data}" style="max-width:100%;display:block"></body></html>`);
+  w.document.write(`<html><body style="margin:0;background:#000"><img src="${src}" style="max-width:100%;display:block"></body></html>`);
 }
 
-function previewImage(input) {
+function previewImage(input, previewId, wrapId) {
   if (!input.files || !input.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
@@ -850,18 +870,18 @@ function previewImage(input) {
       canvas.height = img.height * scale;
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       const compressed = canvas.toDataURL('image/jpeg', 0.75);
-      document.getElementById('preview-img').src = compressed;
-      document.getElementById('image-preview').style.display = '';
+      document.getElementById(previewId).src = compressed;
+      document.getElementById(wrapId).style.display = '';
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
 
-function clearImage() {
-  document.getElementById('f-image').value = '';
-  document.getElementById('preview-img').src = '';
-  document.getElementById('image-preview').style.display = 'none';
+function clearImage(inputId, previewId, wrapId) {
+  document.getElementById(inputId).value = '';
+  document.getElementById(previewId).src = '';
+  document.getElementById(wrapId).style.display = 'none';
 }
 
 // Auto-fill PnL when status changes in edit modal
