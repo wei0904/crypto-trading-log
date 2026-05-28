@@ -5,12 +5,10 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-db_url = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.dirname(__file__), 'trades.db')}")
+_default_db = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@postgres.railway.internal:5432/railway'
+db_url = os.environ.get('DATABASE_URL', _default_db)
 if db_url.startswith('postgres://'):
     db_url = db_url.replace('postgres://', 'postgresql://', 1)
-
-if db_url.startswith('postgresql') and 'sslmode' not in db_url:
-    db_url += ('&' if '?' in db_url else '?') + 'sslmode=require'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
