@@ -505,19 +505,16 @@ const COIN_COLORS = {
   TRUMP:'#B22222', WIF:'#9B59B6',
 };
 
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return `${r},${g},${b}`;
-}
-
 function coinBadge(symbol) {
+  const s = symbol.toLowerCase();
   const color = COIN_COLORS[symbol.toUpperCase()] || '#00d4ff';
   const label = symbol.length <= 3 ? symbol : symbol.slice(0,3);
   const fontSize = label.length <= 2 ? '11px' : '9px';
-  const rgb = hexToRgb(color);
-  const bg = `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18), rgba(${rgb},0.9) 60%, rgba(${rgb},1))`;
-  const shadow = `0 2px 8px rgba(${rgb},0.5)`;
-  return `<div class="coin-icon-badge" style="background:${bg};box-shadow:${shadow};font-size:${fontSize}">${label}</div>`;
+  const imgUrl = `https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${s}.svg`;
+  return `<div class="coin-icon-badge" style="background:transparent;border:none;box-shadow:none;overflow:hidden">
+    <img src="${imgUrl}" width="32" height="32" style="border-radius:50%"
+      onerror="this.parentElement.innerHTML='<span style=\\'display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${color};font-size:${fontSize};font-weight:800;color:#fff\\'>${label}</span>'">
+  </div>`;
 }
 
 let allTrades = [];
