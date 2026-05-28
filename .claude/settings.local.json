@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(pip3 install *)",
+      "Bash(curl -s http://localhost:5000/api/stats)",
+      "Bash(curl *)",
+      "Bash(pkill -f \"python3 app.py\")",
+      "Bash(python3 app.py)",
+      "Bash(open *)",
+      "Bash(ipconfig getifaddr *)",
+      "Bash(pkill -f \"gunicorn\")",
+      "Bash(gh auth *)",
+      "Bash(brew install *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
