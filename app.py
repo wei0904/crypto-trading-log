@@ -5,7 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-_default_db = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@postgres.railway.internal:5432/railway'
+_default_db = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway'
 db_url = os.environ.get('DATABASE_URL', _default_db)
 if db_url.startswith('postgres://'):
     db_url = db_url.replace('postgres://', 'postgresql://', 1)
