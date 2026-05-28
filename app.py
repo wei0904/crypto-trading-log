@@ -19,6 +19,7 @@ db = SQLAlchemy(app)
 class Trade(db.Model):
     __tablename__ = 'trades'
     id = db.Column(db.Integer, primary_key=True)
+    trader = db.Column(db.String(20), default='我')
     date = db.Column(db.String(20), nullable=False)
     coin = db.Column(db.String(20), nullable=False)
     direction = db.Column(db.String(10), nullable=False)
@@ -60,6 +61,7 @@ def add_trade():
     d = request.json
     entry, tp, sl = float(d['entry_price']), float(d['take_profit']), float(d['stop_loss'])
     trade = Trade(
+        trader=d.get('trader', '我'),
         date=d.get('date', datetime.now().strftime('%Y-%m-%d')),
         coin=d['coin'].upper(),
         direction=d['direction'],
@@ -83,7 +85,7 @@ def add_trade():
 def update_trade(trade_id):
     trade = Trade.query.get_or_404(trade_id)
     d = request.json
-    for field in ['date', 'coin', 'direction', 'entry_price', 'take_profit',
+    for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
                   'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes']:
         if field in d:
             setattr(trade, field, d[field])
@@ -102,7 +104,11 @@ def delete_trade(trade_id):
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    trades = Trade.query.all()
+    trader = request.args.get('trader')
+    q = Trade.query
+    if trader:
+        q = q.filter_by(trader=trader)
+    trades = q.all()
     closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
     wins = [t for t in trades if t.status == '止盈']
     losses = [t for t in trades if t.status == '止損']
