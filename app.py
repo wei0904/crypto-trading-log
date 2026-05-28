@@ -64,27 +64,31 @@ def get_trades():
 
 @app.route('/api/trades', methods=['POST'])
 def add_trade():
-    d = request.json
-    entry, tp, sl = float(d['entry_price']), float(d['take_profit']), float(d['stop_loss'])
-    trade = Trade(
-        trader=d.get('trader', '我'),
-        date=d.get('date', datetime.now().strftime('%Y-%m-%d')),
-        coin=d['coin'].upper(),
-        direction=d['direction'],
-        entry_price=entry,
-        take_profit=tp,
-        stop_loss=sl,
-        rr_ratio=calc_rr(entry, tp, sl, d['direction']),
-        trade_time=d.get('trade_time', ''),
-        risk_amount=d.get('risk_amount'),
-        condition=d.get('condition', ''),
-        pnl=d.get('pnl'),
-        status=d.get('status', '進行中'),
-        notes=d.get('notes', ''),
-    )
-    db.session.add(trade)
-    db.session.commit()
-    return jsonify(trade.to_dict()), 201
+    try:
+        d = request.json
+        entry, tp, sl = float(d['entry_price']), float(d['take_profit']), float(d['stop_loss'])
+        trade = Trade(
+            trader=d.get('trader', '我'),
+            date=d.get('date', datetime.now().strftime('%Y-%m-%d')),
+            coin=d['coin'].upper(),
+            direction=d['direction'],
+            entry_price=entry,
+            take_profit=tp,
+            stop_loss=sl,
+            rr_ratio=calc_rr(entry, tp, sl, d['direction']),
+            trade_time=d.get('trade_time', ''),
+            risk_amount=d.get('risk_amount'),
+            condition=d.get('condition', ''),
+            pnl=d.get('pnl'),
+            status=d.get('status', '進行中'),
+            notes=d.get('notes', ''),
+        )
+        db.session.add(trade)
+        db.session.commit()
+        return jsonify(trade.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return str(e), 500
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['PUT'])
