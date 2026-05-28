@@ -756,11 +756,17 @@ async function submitTrade() {
   const url = editId ? `/api/trades/${editId}` : '/api/trades';
   const method = editId ? 'PUT' : 'POST';
 
-  await fetch(url, {
+  const res = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+
+  if (!res.ok) {
+    const err = await res.text();
+    alert('儲存失敗：' + err);
+    return;
+  }
 
   closeModal();
   loadTrades();
