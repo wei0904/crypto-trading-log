@@ -143,22 +143,23 @@ def get_stats():
 
 
 with app.app_context():
-    db.create_all()
-    # Auto-add missing columns without dropping existing data
-    with db.engine.connect() as conn:
-        if db_url.startswith('postgresql'):
-            existing = {row[0] for row in conn.execute(
-                db.text("SELECT column_name FROM information_schema.columns WHERE table_name='trades'")
-            )}
-        else:
-            existing = {row[1] for row in conn.execute(db.text("PRAGMA table_info(trades)"))}
-
-        model_cols = {c.name: c for c in Trade.__table__.columns if c.name != 'id'}
-        for col_name, col in model_cols.items():
-            if col_name not in existing:
-                col_type = str(col.type.compile(db.engine.dialect))
-                conn.execute(db.text(f'ALTER TABLE trades ADD COLUMN {col_name} {col_type}'))
-                conn.commit()
+    try:
+        db.create_all()
+        with db.engine.connect() as conn:
+            if db_url.startswith('postgresql'):
+                existing = {row[0] for row in conn.execute(
+                    db.text("SELECT column_name FROM information_schema.columns WHERE table_name='trades'")
+                )}
+            else:
+                existing = {row[1] for row in conn.execute(db.text("PRAGMA table_info(trades)"))}
+            model_cols = {c.name: c for c in Trade.__table__.columns if c.name != 'id'}
+            for col_name, col in model_cols.items():
+                if col_name not in existing:
+                    col_type = str(col.type.compile(db.engine.dialect))
+                    conn.execute(db.text(f'ALTER TABLE trades ADD COLUMN {col_name} {col_type}'))
+                    conn.commit()
+    except Exception as e:
+        print(f'DB init error: {e}')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
