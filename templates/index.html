@@ -524,6 +524,7 @@ let currentDir = 'LONG';
 let editTradeRisk = null;
 let editTradeRR = null;
 let imgStore = { img1: null, img2: null };
+const tradeImageCache = {};
 
 // Live clock
 function updateClock() {
@@ -777,8 +778,7 @@ async function openEdit(id) {
   calcRR();
   document.getElementById('modal').classList.add('open');
   if (base.has_image || base.has_image2) {
-    const res = await fetch(`/api/trades/${id}`);
-    const t = await res.json();
+    const t = await fetchTradeWithImages(id);
     if (t.image_data) {
       imgStore.img1 = t.image_data;
       document.getElementById('preview-img').src = t.image_data;
@@ -842,6 +842,7 @@ async function submitTrade() {
     return;
   }
 
+  if (editId) delete tradeImageCache[editId];
   closeModal();
   loadTrades();
 }
@@ -880,9 +881,16 @@ async function deleteTrade(id) {
   loadTrades();
 }
 
+async function fetchTradeWithImages(id) {
+  if (!tradeImageCache[id]) {
+    const res = await fetch(`/api/trades/${id}`);
+    tradeImageCache[id] = await res.json();
+  }
+  return tradeImageCache[id];
+}
+
 async function viewImage(id, num) {
-  const res = await fetch(`/api/trades/${id}`);
-  const t = await res.json();
+  const t = await fetchTradeWithImages(id);
   const src = num === 2 ? t.image_data2 : t.image_data;
   if (!src) return;
   const lb = document.getElementById('lightbox');
