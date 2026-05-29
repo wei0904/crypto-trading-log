@@ -983,7 +983,7 @@ function previewImage(input, previewId, wrapId, storeKey) {
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        const compressed = canvas.toDataURL('image/jpeg', 0.75);
         if (compressed.length > 100) dataUrl = compressed;
       } catch (_) {}
       imgStore[storeKey] = dataUrl;
