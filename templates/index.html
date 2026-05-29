@@ -421,7 +421,7 @@
       </div>
       <div class="form-group">
         <label>時間</label>
-        <input type="text" id="f-time" placeholder="14:30" maxlength="5" inputmode="numeric">
+        <input type="text" id="f-time" placeholder="14:30" maxlength="5" inputmode="numeric" oninput="autoTimeColon(this)">
       </div>
       <div class="form-group full">
         <label>方向</label>
@@ -472,18 +472,18 @@
       </div>
       <div class="form-group full">
         <label>規劃</label>
-        <input type="file" id="f-image" accept="image/*" onchange="previewImage(this, 'preview-img', 'image-preview')">
+        <input type="file" id="f-image" accept="image/*" onchange="previewImage(this, 'preview-img', 'image-preview', 'img1')">
         <div id="image-preview" style="margin-top:8px;display:none">
           <img id="preview-img" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
-          <button type="button" onclick="clearImage('f-image','preview-img','image-preview')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
+          <button type="button" onclick="clearImage('f-image','preview-img','image-preview','img1')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
         </div>
       </div>
       <div class="form-group full">
         <label>盈虧</label>
-        <input type="file" id="f-image2" accept="image/*" onchange="previewImage(this, 'preview-img2', 'image-preview2')">
+        <input type="file" id="f-image2" accept="image/*" onchange="previewImage(this, 'preview-img2', 'image-preview2', 'img2')">
         <div id="image-preview2" style="margin-top:8px;display:none">
           <img id="preview-img2" style="max-width:100%;border-radius:6px;border:1px solid var(--border)">
-          <button type="button" onclick="clearImage('f-image2','preview-img2','image-preview2')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
+          <button type="button" onclick="clearImage('f-image2','preview-img2','image-preview2','img2')" style="margin-top:6px;padding:4px 10px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:inherit;font-size:11px;border-radius:3px;cursor:pointer">移除</button>
         </div>
       </div>
     </div>
@@ -523,6 +523,7 @@ let editId = null;
 let currentDir = 'LONG';
 let editTradeRisk = null;
 let editTradeRR = null;
+let imgStore = { img1: null, img2: null };
 
 // Live clock
 function updateClock() {
@@ -537,6 +538,12 @@ updateClock();
 
 // Set today as default date
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+function autoTimeColon(el) {
+  let v = el.value.replace(/[^0-9]/g, '');
+  if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2, 4);
+  el.value = v;
+}
 
 function setDir(dir) {
   currentDir = dir;
@@ -569,10 +576,18 @@ function calcRR() {
 }
 
 async function loadTrades() {
-  const res = await fetch('/api/trades');
-  allTrades = await res.json();
-  renderTable();
-  loadStats();
+  try {
+    const res = await fetch('/api/trades');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allTrades = await res.json();
+    renderTable();
+    loadStats();
+  } catch (err) {
+    document.getElementById('trade-tbody').innerHTML =
+      `<tr><td colspan="12" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
+    document.getElementById('trade-cards').innerHTML =
+      `<div style="text-align:center;padding:40px;color:var(--red);letter-spacing:2px;font-size:13px">[ 無法連線到伺服器：${err.message} ]</div>`;
+  }
 }
 
 async function loadStats() {
@@ -730,8 +745,8 @@ function openModal() {
   document.getElementById('f-status').value = '進行中';
   document.getElementById('status-group').style.display = 'none';
   document.getElementById('f-notes').value = '';
-  clearImage('f-image','preview-img','image-preview');
-  clearImage('f-image2','preview-img2','image-preview2');
+  clearImage('f-image','preview-img','image-preview','img1');
+  clearImage('f-image2','preview-img2','image-preview2','img2');
   document.getElementById('rr-calc').textContent = '--';
   setDir('LONG');
   document.getElementById('modal').classList.add('open');
@@ -756,13 +771,15 @@ function openEdit(id) {
   document.getElementById('f-notes').value = t.notes || '';
   editTradeRisk = t.risk_amount;
   editTradeRR = t.rr_ratio;
-  clearImage('f-image','preview-img','image-preview');
-  clearImage('f-image2','preview-img2','image-preview2');
+  clearImage('f-image','preview-img','image-preview','img1');
+  clearImage('f-image2','preview-img2','image-preview2','img2');
   if (t.image_data) {
+    imgStore.img1 = t.image_data;
     document.getElementById('preview-img').src = t.image_data;
     document.getElementById('image-preview').style.display = '';
   }
   if (t.image_data2) {
+    imgStore.img2 = t.image_data2;
     document.getElementById('preview-img2').src = t.image_data2;
     document.getElementById('image-preview2').style.display = '';
   }
@@ -786,10 +803,8 @@ async function submitTrade() {
     return;
   }
 
-  const imgEl = document.getElementById('preview-img');
-  const imgEl2 = document.getElementById('preview-img2');
-  const imageData = imgEl.src && (imgEl.src.startsWith('data:') || imgEl.src.startsWith('http')) ? imgEl.src : null;
-  const imageData2 = imgEl2.src && (imgEl2.src.startsWith('data:') || imgEl2.src.startsWith('http')) ? imgEl2.src : null;
+  const imageData = imgStore.img1 || null;
+  const imageData2 = imgStore.img2 || null;
 
   const body = {
     coin,
@@ -874,31 +889,44 @@ function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
 }
 
-function previewImage(input, previewId, wrapId) {
+function previewImage(input, previewId, wrapId, storeKey) {
   if (!input.files || !input.files[0]) return;
+  imgStore[storeKey] = null;
   const reader = new FileReader();
   reader.onload = e => {
+    const raw = e.target.result;
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxW = 2400;
-      const scale = img.width > maxW ? maxW / img.width : 1;
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressed = canvas.toDataURL('image/jpeg', 0.92);
-      document.getElementById(previewId).src = compressed;
+      let dataUrl = raw;
+      try {
+        const canvas = document.createElement('canvas');
+        const maxDim = 1200;
+        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        if (compressed.length > 100) dataUrl = compressed;
+      } catch (_) {}
+      imgStore[storeKey] = dataUrl;
+      document.getElementById(previewId).src = dataUrl;
       document.getElementById(wrapId).style.display = '';
     };
-    img.src = e.target.result;
+    img.onerror = () => {
+      imgStore[storeKey] = raw;
+      document.getElementById(previewId).src = raw;
+      document.getElementById(wrapId).style.display = '';
+    };
+    img.src = raw;
   };
   reader.readAsDataURL(input.files[0]);
 }
 
-function clearImage(inputId, previewId, wrapId) {
+function clearImage(inputId, previewId, wrapId, storeKey) {
   document.getElementById(inputId).value = '';
-  document.getElementById(previewId).src = '';
+  document.getElementById(previewId).removeAttribute('src');
   document.getElementById(wrapId).style.display = 'none';
+  if (storeKey) imgStore[storeKey] = null;
 }
 
 // Auto-fill PnL when status changes in edit modal
