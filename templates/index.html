@@ -114,13 +114,21 @@
   .btn:hover { background: rgba(0,212,255,0.15); box-shadow: var(--glow-cyan); }
   .btn.primary { background: rgba(0,212,255,0.1); box-shadow: var(--glow-cyan); }
 
-  .filter-group { display: flex; gap: 6px; margin-left: auto; }
+  .filter-group { display: flex; gap: 6px; margin-left: auto; align-items: center; }
   .filter-btn {
     padding: 6px 14px; border: 1px solid var(--border); background: transparent;
     color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px;
     cursor: pointer; border-radius: 4px; transition: all 0.2s;
   }
   .filter-btn.active, .filter-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,0.08); }
+  #month-select {
+    padding: 6px 10px; border: 1px solid var(--border); background: var(--bg2);
+    color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px;
+    cursor: pointer; border-radius: 4px; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a9ab0'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px;
+  }
+  #month-select:focus { border-color: var(--cyan); outline: none; }
 
   .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   table { width: 100%; border-collapse: collapse; }
@@ -397,7 +405,7 @@
   <div class="toolbar">
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
     <div class="filter-group">
-      <select id="month-select" onchange="setMonth(this.value)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;cursor:pointer">
+      <select id="month-select" onchange="setMonth(this.value)">
         <option value="ALL">全部月份</option>
       </select>
       <button class="filter-btn active" onclick="setFilter('ALL', this)">ALL</button>
