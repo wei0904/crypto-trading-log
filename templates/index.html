@@ -820,8 +820,12 @@ function renderTable() {
       <div class="card-meta">
         <span>${t.date}${t.trade_time ? ' ' + t.trade_time : ''}</span>
         <span>${t.rr_ratio ? '<span class="rr-badge">' + t.rr_ratio + 'R</span>' : ''}${t.risk_amount ? ' &nbsp;止損 ' + t.risk_amount + 'U' : ''}</span>
-        <span>${pnlHtml}${t.fee ? `<span style="color:var(--text2);font-size:11px;margin-left:4px">費 ${t.fee}U</span>` : ''}${(t.pnl != null && t.fee) ? `<span style="color:var(--yellow);font-size:11px;margin-left:4px">淨 ${Math.round((t.pnl - t.fee)*100)/100}U</span>` : ''}</span>
       </div>
+      ${(t.pnl != null) ? `<div style="font-size:12px;margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        ${pnlHtml}
+        ${t.fee ? `<span style="color:var(--text2);font-size:11px">費 ${t.fee}U</span>` : ''}
+        ${(t.fee) ? `<span style="color:var(--yellow);font-size:11px">淨 ${Math.round((t.pnl - t.fee)*100)/100}U</span>` : ''}
+      </div>` : ''}
       ${t.condition ? `<div style="font-size:11px;color:var(--text2);margin-bottom:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;cursor:pointer" onclick="this.style.webkitLineClamp=this.style.webkitLineClamp?'':'2'">${t.condition}</div>` : ''}
       <div class="card-actions">
         ${quickBtns}
