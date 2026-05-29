@@ -676,8 +676,8 @@ function renderTable() {
       <div class="card-actions">
         ${quickBtns}
         <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-        ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
-        ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
+        ${t.has_image ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
+        ${t.has_image2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
         <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
       </div>
     </div>`;
@@ -752,40 +752,44 @@ function openModal() {
   document.getElementById('modal').classList.add('open');
 }
 
-function openEdit(id) {
-  const t = allTrades.find(x => x.id === id);
-  if (!t) return;
+async function openEdit(id) {
+  const base = allTrades.find(x => x.id === id);
+  if (!base) return;
   editId = id;
   document.getElementById('modal-title').textContent = '編輯交易紀錄';
-  document.getElementById('f-coin').value = t.coin;
-  document.getElementById('f-date').value = t.date;
-  document.getElementById('f-entry').value = t.entry_price;
-  document.getElementById('f-tp').value = t.take_profit;
-  document.getElementById('f-sl').value = t.stop_loss;
-  document.getElementById('f-time').value = t.trade_time || '';
-  document.getElementById('f-risk').value = t.risk_amount ?? '';
-  document.getElementById('f-condition').value = t.condition || '';
-  document.getElementById('f-pnl').value = t.pnl ?? '';
-  document.getElementById('f-status').value = t.status;
+  document.getElementById('f-coin').value = base.coin;
+  document.getElementById('f-date').value = base.date;
+  document.getElementById('f-entry').value = base.entry_price;
+  document.getElementById('f-tp').value = base.take_profit;
+  document.getElementById('f-sl').value = base.stop_loss;
+  document.getElementById('f-time').value = base.trade_time || '';
+  document.getElementById('f-risk').value = base.risk_amount ?? '';
+  document.getElementById('f-condition').value = base.condition || '';
+  document.getElementById('f-pnl').value = base.pnl ?? '';
+  document.getElementById('f-status').value = base.status;
   document.getElementById('status-group').style.display = '';
-  document.getElementById('f-notes').value = t.notes || '';
-  editTradeRisk = t.risk_amount;
-  editTradeRR = t.rr_ratio;
+  document.getElementById('f-notes').value = base.notes || '';
+  editTradeRisk = base.risk_amount;
+  editTradeRR = base.rr_ratio;
   clearImage('f-image','preview-img','image-preview','img1');
   clearImage('f-image2','preview-img2','image-preview2','img2');
-  if (t.image_data) {
-    imgStore.img1 = t.image_data;
-    document.getElementById('preview-img').src = t.image_data;
-    document.getElementById('image-preview').style.display = '';
-  }
-  if (t.image_data2) {
-    imgStore.img2 = t.image_data2;
-    document.getElementById('preview-img2').src = t.image_data2;
-    document.getElementById('image-preview2').style.display = '';
-  }
-  setDir(t.direction);
+  setDir(base.direction);
   calcRR();
   document.getElementById('modal').classList.add('open');
+  if (base.has_image || base.has_image2) {
+    const res = await fetch(`/api/trades/${id}`);
+    const t = await res.json();
+    if (t.image_data) {
+      imgStore.img1 = t.image_data;
+      document.getElementById('preview-img').src = t.image_data;
+      document.getElementById('image-preview').style.display = '';
+    }
+    if (t.image_data2) {
+      imgStore.img2 = t.image_data2;
+      document.getElementById('preview-img2').src = t.image_data2;
+      document.getElementById('image-preview2').style.display = '';
+    }
+  }
 }
 
 function closeModal() {
@@ -876,10 +880,11 @@ async function deleteTrade(id) {
   loadTrades();
 }
 
-function viewImage(id, num) {
-  const t = allTrades.find(x => x.id === id);
+async function viewImage(id, num) {
+  const res = await fetch(`/api/trades/${id}`);
+  const t = await res.json();
   const src = num === 2 ? t.image_data2 : t.image_data;
-  if (!t || !src) return;
+  if (!src) return;
   const lb = document.getElementById('lightbox');
   document.getElementById('lightbox-img').src = src;
   lb.style.display = 'flex';

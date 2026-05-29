@@ -34,8 +34,14 @@ class Trade(db.Model):
     image_data2 = db.Column(db.Text)
     created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+    def to_dict(self, include_images=True):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        if not include_images:
+            d.pop('image_data', None)
+            d.pop('image_data2', None)
+            d['has_image'] = bool(self.image_data)
+            d['has_image2'] = bool(self.image_data2)
+        return d
 
 
 def calc_rr(entry, tp, sl, direction):
@@ -58,7 +64,7 @@ def debug_db():
 @app.route('/api/trades', methods=['GET'])
 def get_trades():
     trades = Trade.query.order_by(Trade.date.desc(), Trade.id.desc()).all()
-    return jsonify([t.to_dict() for t in trades])
+    return jsonify([t.to_dict(include_images=False) for t in trades])
 
 
 @app.route('/api/trades', methods=['POST'])
@@ -81,6 +87,8 @@ def add_trade():
             pnl=d.get('pnl'),
             status=d.get('status', '進行中'),
             notes=d.get('notes', ''),
+            image_data=d.get('image_data'),
+            image_data2=d.get('image_data2'),
         )
         db.session.add(trade)
         db.session.commit()
@@ -88,6 +96,12 @@ def add_trade():
     except Exception as e:
         db.session.rollback()
         return str(e), 500
+
+
+@app.route('/api/trades/<int:trade_id>', methods=['GET'])
+def get_trade(trade_id):
+    trade = Trade.query.get_or_404(trade_id)
+    return jsonify(trade.to_dict())
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['PUT'])
