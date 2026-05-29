@@ -358,6 +358,14 @@
       <div class="stat-label">累計損益</div>
       <div class="stat-value" id="stat-pnl">-</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">總手續費</div>
+      <div class="stat-value negative" id="stat-fees">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">淨損益</div>
+      <div class="stat-value" id="stat-netpnl">-</div>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -447,7 +455,14 @@
       </div>
       <div class="form-group">
         <label>止損金額 (USDT)</label>
-        <input type="number" id="f-risk" placeholder="例：100">
+        <input type="number" id="f-risk" placeholder="例：100" oninput="calcFee()">
+      </div>
+      <div class="form-group">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          手續費 (USDT)
+          <span id="fee-rate-display" onclick="editFeeRate()" style="font-size:10px;color:var(--cyan);cursor:pointer;text-decoration:underline;letter-spacing:1px">費率 <span id="fee-rate-val">0.04</span>%</span>
+        </label>
+        <input type="number" id="f-fee" placeholder="自動計算" step="0.01">
       </div>
       <div class="form-group">
         <label>進場條件 / 策略</label>
@@ -540,6 +555,30 @@ updateClock();
 // Set today as default date
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 
+let feeRate = parseFloat(localStorage.getItem('feeRate') || '0.0004');
+function initFeeRateDisplay() {
+  document.getElementById('fee-rate-val').textContent = (feeRate * 100).toFixed(2);
+}
+function editFeeRate() {
+  const input = prompt('請輸入單邊手續費率（%），例如 0.04', (feeRate * 100).toFixed(4));
+  if (input === null) return;
+  const v = parseFloat(input);
+  if (isNaN(v) || v <= 0) return;
+  feeRate = v / 100;
+  localStorage.setItem('feeRate', feeRate);
+  document.getElementById('fee-rate-val').textContent = (feeRate * 100).toFixed(2);
+  calcFee();
+}
+function calcFee() {
+  const entry = parseFloat(document.getElementById('f-entry').value);
+  const sl = parseFloat(document.getElementById('f-sl').value);
+  const risk = parseFloat(document.getElementById('f-risk').value);
+  if (!entry || !sl || !risk || Math.abs(entry - sl) === 0) return;
+  const posSize = risk / Math.abs(entry - sl);
+  const fee = posSize * entry * feeRate * 2;
+  document.getElementById('f-fee').value = Math.round(fee * 100) / 100;
+}
+
 function autoTimeColon(el) {
   let v = el.value.replace(/[^0-9]/g, '');
   if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2, 4);
@@ -574,6 +613,7 @@ function calcRR() {
   const rr = (reward / risk).toFixed(2);
   el.textContent = `${rr}R`;
   el.style.color = rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)';
+  calcFee();
 }
 
 async function loadTrades() {
@@ -607,6 +647,12 @@ async function loadStats() {
   const pnl = document.getElementById('stat-pnl');
   pnl.textContent = (s.total_pnl >= 0 ? '+' : '') + s.total_pnl + ' U';
   pnl.className = 'stat-value ' + (s.total_pnl > 0 ? 'positive' : s.total_pnl < 0 ? 'negative' : '');
+
+  document.getElementById('stat-fees').textContent = s.total_fees > 0 ? '-' + s.total_fees + ' U' : '-';
+
+  const netpnl = document.getElementById('stat-netpnl');
+  netpnl.textContent = (s.net_pnl >= 0 ? '+' : '') + s.net_pnl + ' U';
+  netpnl.className = 'stat-value ' + (s.net_pnl > 0 ? 'positive' : s.net_pnl < 0 ? 'negative' : '');
 }
 
 function setFilter(f, btn) {
@@ -671,7 +717,7 @@ function renderTable() {
       <div class="card-meta">
         <span>${t.date}${t.trade_time ? ' ' + t.trade_time : ''}</span>
         <span>${t.rr_ratio ? '<span class="rr-badge">' + t.rr_ratio + 'R</span>' : ''}${t.risk_amount ? ' &nbsp;止損 ' + t.risk_amount + 'U' : ''}</span>
-        <span>${pnlHtml}</span>
+        <span>${pnlHtml}${t.fee ? `<span style="color:var(--text2);font-size:11px;margin-left:4px">費 ${t.fee}U</span>` : ''}${(t.pnl != null && t.fee) ? `<span style="color:var(--yellow);font-size:11px;margin-left:4px">淨 ${Math.round((t.pnl - t.fee)*100)/100}U</span>` : ''}</span>
       </div>
       ${t.condition ? `<div style="font-size:11px;color:var(--text2);margin-bottom:10px">${t.condition}</div>` : ''}
       <div class="card-actions">
@@ -693,8 +739,9 @@ function renderTable() {
     else if (t.status === '止損') statusClass = 'loss';
     else if (t.status === '已平倉') statusClass = 'closed';
 
-    const pnl = t.pnl !== null && t.pnl !== undefined
-      ? `<span class="${t.pnl > 0 ? 'pnl-positive' : t.pnl < 0 ? 'pnl-negative' : 'pnl-null'}">${t.pnl > 0 ? '+' : ''}${t.pnl} U</span>`
+    const pnlVal = t.pnl !== null && t.pnl !== undefined;
+    const pnl = pnlVal
+      ? `<span class="${t.pnl > 0 ? 'pnl-positive' : t.pnl < 0 ? 'pnl-negative' : 'pnl-null'}">${t.pnl > 0 ? '+' : ''}${t.pnl} U</span>${t.fee ? `<br><span style="color:var(--text2);font-size:11px">費 ${t.fee}U</span>` : ''}${(pnlVal && t.fee) ? `<br><span style="color:var(--yellow);font-size:11px">淨 ${Math.round((t.pnl-t.fee)*100)/100}U</span>` : ''}`
       : `<span class="pnl-null">-</span>`;
 
     const rr = t.rr_ratio ? `<span class="rr-badge">${t.rr_ratio}R</span>` : '-';
@@ -722,8 +769,8 @@ function renderTable() {
             <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-          ${t.image_data ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
-          ${t.image_data2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
+          ${t.has_image ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
+          ${t.has_image2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
       </td>
@@ -741,6 +788,7 @@ function openModal() {
   document.getElementById('f-sl').value = '';
   document.getElementById('f-time').value = '';
   document.getElementById('f-risk').value = '';
+  document.getElementById('f-fee').value = '';
   document.getElementById('f-condition').value = '';
   document.getElementById('f-pnl').value = '';
   document.getElementById('f-status').value = '進行中';
@@ -767,6 +815,7 @@ async function openEdit(id) {
   document.getElementById('f-risk').value = base.risk_amount ?? '';
   document.getElementById('f-condition').value = base.condition || '';
   document.getElementById('f-pnl').value = base.pnl ?? '';
+  document.getElementById('f-fee').value = base.fee ?? '';
   document.getElementById('f-status').value = base.status;
   document.getElementById('status-group').style.display = '';
   document.getElementById('f-notes').value = base.notes || '';
@@ -821,6 +870,7 @@ async function submitTrade() {
     risk_amount: document.getElementById('f-risk').value || null,
     condition: document.getElementById('f-condition').value,
     pnl: document.getElementById('f-pnl').value || null,
+    fee: document.getElementById('f-fee').value || null,
     status: document.getElementById('f-status').value,
     notes: document.getElementById('f-notes').value,
     image_data: imageData,
@@ -958,6 +1008,7 @@ document.getElementById('modal').addEventListener('click', function(e) {
 });
 
 loadTrades();
+initFeeRateDisplay();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/static/sw.js');

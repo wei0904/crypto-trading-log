@@ -32,6 +32,7 @@ class Trade(db.Model):
     notes = db.Column(db.Text)
     image_data = db.Column(db.Text)
     image_data2 = db.Column(db.Text)
+    fee = db.Column(db.Float)
     created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
     def to_dict(self, include_images=True):
@@ -111,7 +112,7 @@ def update_trade(trade_id):
         d = request.json
         float_fields = {'entry_price', 'take_profit', 'stop_loss', 'risk_amount', 'pnl'}
         for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
-                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes', 'image_data', 'image_data2']:
+                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes', 'image_data', 'image_data2', 'fee']:
             if field in d:
                 val = d[field]
                 if field in float_fields and val is not None:
@@ -144,6 +145,7 @@ def get_stats():
     wins = [t for t in trades if t.status == '止盈']
     losses = [t for t in trades if t.status == '止損']
     total_pnl = sum(t.pnl for t in closed if t.pnl)
+    total_fees = sum(t.fee for t in trades if t.fee)
     win_rate = round(len(wins) / len(closed) * 100, 1) if closed else 0
     rr_vals = [t.rr_ratio for t in trades if t.rr_ratio]
     avg_rr = round(sum(rr_vals) / len(rr_vals), 2) if rr_vals else 0
@@ -155,6 +157,8 @@ def get_stats():
         'losses': len(losses),
         'win_rate': win_rate,
         'total_pnl': round(total_pnl, 2),
+        'total_fees': round(total_fees, 2),
+        'net_pnl': round(total_pnl - total_fees, 2),
         'avg_rr': avg_rr,
     })
 
