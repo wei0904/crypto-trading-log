@@ -396,10 +396,10 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
-    <select id="month-select" onchange="setMonth(this.value)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;cursor:pointer">
-      <option value="ALL">全部月份</option>
-    </select>
     <div class="filter-group">
+      <select id="month-select" onchange="setMonth(this.value)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;cursor:pointer">
+        <option value="ALL">全部月份</option>
+      </select>
       <button class="filter-btn active" onclick="setFilter('ALL', this)">ALL</button>
       <button class="filter-btn" onclick="setFilter('進行中', this)">進行中</button>
       <button class="filter-btn" onclick="setFilter('止盈', this)">止盈</button>
