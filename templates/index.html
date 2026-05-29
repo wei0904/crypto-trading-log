@@ -405,8 +405,8 @@
       <thead>
         <tr>
           <th>日期 / 時間</th>
-          <th>幣種</th>
-          <th>方向</th>
+          <th style="text-align:center">幣種</th>
+          <th style="text-align:center">方向</th>
           <th style="text-align:center">進場價</th>
           <th style="text-align:center">止盈</th>
           <th style="text-align:center">止損</th>
@@ -801,11 +801,11 @@ function renderTable() {
 
     return `<tr>
       <td class="date-cell">${t.date}${t.trade_time ? '<br><span style="color:var(--cyan);font-size:11px">' + t.trade_time + '</span>' : ''}</td>
-      <td><div class="coin-cell">
+      <td style="text-align:center"><div class="coin-cell" style="justify-content:center">
         ${coinBadge(t.coin)}
         <span class="coin-badge">${t.coin}</span>
       </div></td>
-      <td><span class="direction-badge ${dirClass}">${dirLabel}</span></td>
+      <td style="text-align:center"><span class="direction-badge ${dirClass}">${dirLabel}</span></td>
       <td class="price-cell">${t.entry_price}</td>
       <td class="price-cell" style="color:var(--green)">${t.take_profit}</td>
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
