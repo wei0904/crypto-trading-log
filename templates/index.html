@@ -811,7 +811,10 @@ function renderTable() {
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
       <td style="text-align:center">${rr}</td>
       <td class="price-cell" style="color:var(--red);text-align:center">${t.risk_amount ? t.risk_amount + 'U' : '-'}</td>
-      <td class="condition-cell" onclick="this.classList.toggle('expanded')"><div class="c-inner">${t.condition || '-'}</div></td>
+      <td class="condition-cell" onclick="this.classList.toggle('expanded')">
+        <div class="c-inner">${t.condition || '-'}</div>
+        ${t.notes ? `<div class="c-inner" style="margin-top:4px;opacity:0.6;border-left:2px solid var(--border);padding-left:6px">${t.notes}</div>` : ''}
+      </td>
       <td style="text-align:center">${pnl}</td>
       <td style="text-align:center"><span class="status-badge ${statusClass}">${t.status}</span></td>
       <td style="text-align:center">
