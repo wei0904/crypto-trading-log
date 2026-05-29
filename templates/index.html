@@ -555,7 +555,7 @@ updateClock();
 // Set today as default date
 document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
 
-let feeRate = parseFloat(localStorage.getItem('feeRate') || '0.0004');
+let feeRate = parseFloat(localStorage.getItem('feeRate') || '0.0005');
 function initFeeRateDisplay() {
   document.getElementById('fee-rate-val').textContent = (feeRate * 100).toFixed(2);
 }
