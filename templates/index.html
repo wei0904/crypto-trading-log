@@ -251,7 +251,8 @@
 
   .date-cell { color: var(--text2); font-size: 11px; }
   .price-cell { color: var(--text); font-size: 12px; }
-  .condition-cell { color: var(--text2); font-size: 11px; max-width: 200px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; cursor: default; }
+  .condition-cell { color: var(--text2); font-size: 11px; max-width: 200px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; cursor: pointer; }
+  .condition-cell.expanded { -webkit-line-clamp: unset; color: var(--text); }
 
   /* Mobile cards */
   .trade-cards { display: none; }
@@ -865,7 +866,7 @@ function renderTable() {
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
       <td>${rr}</td>
       <td class="price-cell" style="color:var(--red)">${t.risk_amount ? t.risk_amount + 'U' : '-'}</td>
-      <td class="condition-cell" title="${t.condition || ''}">${t.condition || '-'}</td>
+      <td class="condition-cell" onclick="this.classList.toggle('expanded')">${t.condition || '-'}</td>
       <td>${pnl}</td>
       <td><span class="status-badge ${statusClass}">${t.status}</span></td>
       <td>
