@@ -723,8 +723,8 @@ function renderTable() {
       <div class="card-actions">
         ${quickBtns}
         <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-        ${t.has_image ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
-        ${t.has_image2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
+        <button class="action-btn" onclick="${t.has_image ? `viewImage(${t.id},1)` : `quickUploadImage(${t.id},1)`}" style="border-color:${t.has_image ? 'var(--cyan);color:var(--cyan)' : 'var(--text2);color:var(--text2)'}">規劃</button>
+        <button class="action-btn" onclick="${t.has_image2 ? `viewImage(${t.id},2)` : `quickUploadImage(${t.id},2)`}" style="border-color:${t.has_image2 ? 'var(--cyan);color:var(--cyan)' : 'var(--text2);color:var(--text2)'}">盈虧</button>
         <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
       </div>
     </div>`;
@@ -769,8 +769,8 @@ function renderTable() {
             <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>
           ` : ''}
           <button class="action-btn" onclick="openEdit(${t.id})">編輯</button>
-          ${t.has_image ? `<button class="action-btn" onclick="viewImage(${t.id},1)" style="border-color:var(--cyan);color:var(--cyan)">規劃</button>` : ''}
-          ${t.has_image2 ? `<button class="action-btn" onclick="viewImage(${t.id},2)" style="border-color:var(--cyan);color:var(--cyan)">盈虧</button>` : ''}
+          <button class="action-btn" onclick="${t.has_image ? `viewImage(${t.id},1)` : `quickUploadImage(${t.id},1)`}" style="border-color:${t.has_image ? 'var(--cyan);color:var(--cyan)' : 'var(--text2);color:var(--text2)'}">規劃</button>
+          <button class="action-btn" onclick="${t.has_image2 ? `viewImage(${t.id},2)` : `quickUploadImage(${t.id},2)`}" style="border-color:${t.has_image2 ? 'var(--cyan);color:var(--cyan)' : 'var(--text2);color:var(--text2)'}">盈虧</button>
           <button class="action-btn del" onclick="deleteTrade(${t.id})">刪除</button>
         </div>
       </td>
@@ -944,6 +944,52 @@ async function deleteTrade(id) {
   if (!confirm('確定刪除這筆交易紀錄？')) return;
   await fetch(`/api/trades/${id}`, { method: 'DELETE' });
   loadTrades();
+}
+
+function quickUploadImage(id, num) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    if (!input.files[0]) return;
+    const dataUrl = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const raw = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const maxDim = 1200;
+            const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.75);
+            resolve(compressed.length > 100 ? compressed : raw);
+          } catch { resolve(raw); }
+        };
+        img.onerror = () => resolve(raw);
+        img.src = raw;
+      };
+      reader.readAsDataURL(input.files[0]);
+    });
+    const field = num === 2 ? 'image_data2' : 'image_data';
+    const res = await fetch(`/api/trades/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: dataUrl }),
+    });
+    if (!res.ok) { alert('上傳失敗'); return; }
+    delete tradeImageCache[id];
+    const idx = allTrades.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      if (num === 2) allTrades[idx].has_image2 = true;
+      else allTrades[idx].has_image = true;
+    }
+    renderTable();
+  };
+  input.click();
 }
 
 async function fetchTradeWithImages(id) {
