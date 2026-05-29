@@ -120,6 +120,7 @@
   }
   #month-select:focus { border-color: var(--cyan); outline: none; }
 
+  .desktop-only { display: inline-flex; }
   .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   table { width: 100%; border-collapse: collapse; }
 
@@ -272,6 +273,7 @@
     /* Hide table, show cards on mobile */
     .table-wrap { display: none; }
     .trade-cards { display: flex; flex-direction: column; gap: 10px; }
+    .desktop-only { display: none !important; }
 
     .trade-card {
       background: var(--bg2);
@@ -384,6 +386,7 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn" onclick="loadTrades()" style="letter-spacing:1px">⟳ 重新整理</button>
+    <button class="btn desktop-only" onclick="exportCSV()" style="letter-spacing:1px">↓ 匯出 CSV</button>
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
     <div class="filter-group">
       <select id="month-select" onchange="setMonth(this.value)">
@@ -687,6 +690,27 @@ function loadStats() {
   netpnl.className = 'stat-value ' + (net_pnl > 0 ? 'positive' : net_pnl < 0 ? 'negative' : '');
 }
 
+
+function exportCSV() {
+  let trades = currentMonth === 'ALL' ? allTrades : allTrades.filter(t => t.date.startsWith(currentMonth));
+  trades = currentFilter === 'ALL' ? trades : trades.filter(t => t.status === currentFilter);
+
+  const headers = ['日期','時間','幣種','方向','進場價','止盈','止損','盈虧比','止損金額','進場條件','獲利/虧損','手續費','淨損益','狀態','備註'];
+  const rows = trades.map(t => [
+    t.date, t.trade_time || '', t.coin, t.direction,
+    t.entry_price, t.take_profit, t.stop_loss, t.rr_ratio || '',
+    t.risk_amount || '', `"${(t.condition || '').replace(/"/g,'""')}"`,
+    t.pnl ?? '', t.fee || '',
+    (t.pnl != null && t.fee) ? Math.round((t.pnl - t.fee) * 100) / 100 : '',
+    t.status, `"${(t.notes || '').replace(/"/g,'""')}"`
+  ].join(','));
+
+  const csv = '﻿' + [headers.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `交易紀錄${currentMonth !== 'ALL' ? '_' + currentMonth : ''}.csv`;
+  a.click();
+}
 
 function setFilter(f, btn) {
   currentFilter = f;
