@@ -94,6 +94,16 @@
   .stat-value.negative { color: var(--red); text-shadow: var(--glow-red); }
   .stat-value.neutral { color: var(--yellow); text-shadow: 0 0 8px rgba(255,215,0,0.6); }
 
+  .monthly-section { margin-bottom: 20px; }
+  .monthly-toggle { background: none; border: 1px solid var(--border); color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 2px; padding: 5px 14px; border-radius: 4px; cursor: pointer; margin-bottom: 10px; }
+  .monthly-toggle:hover { border-color: var(--cyan); color: var(--cyan); }
+  .monthly-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .monthly-table th { color: var(--text2); font-weight: normal; letter-spacing: 1px; padding: 6px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+  .monthly-table td { padding: 7px 12px; border-bottom: 1px solid rgba(26,58,92,0.4); }
+  .monthly-table tr:hover td { background: rgba(0,212,255,0.04); }
+  .monthly-table .m-link { color: var(--cyan); cursor: pointer; text-decoration: underline; }
+  .monthly-table .m-link:hover { text-shadow: var(--glow-cyan); }
+
   .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 
   .btn {
@@ -367,6 +377,19 @@
     <div class="stat-card">
       <div class="stat-label">淨損益</div>
       <div class="stat-value" id="stat-netpnl">-</div>
+    </div>
+  </div>
+
+  <!-- Monthly summary -->
+  <div class="monthly-section">
+    <button class="monthly-toggle" onclick="toggleMonthly()">▶ 月度統計</button>
+    <div id="monthly-body" style="display:none">
+      <table class="monthly-table">
+        <thead><tr>
+          <th>月份</th><th>總交易</th><th>止盈</th><th>止損</th><th>平倉</th><th>勝率</th><th>損益</th><th>手續費</th><th>淨損益</th>
+        </tr></thead>
+        <tbody id="monthly-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -661,6 +684,53 @@ async function loadStats() {
   const netpnl = document.getElementById('stat-netpnl');
   netpnl.textContent = (s.net_pnl >= 0 ? '+' : '') + s.net_pnl + ' U';
   netpnl.className = 'stat-value ' + (s.net_pnl > 0 ? 'positive' : s.net_pnl < 0 ? 'negative' : '');
+}
+
+function toggleMonthly() {
+  const body = document.getElementById('monthly-body');
+  const btn = document.querySelector('.monthly-toggle');
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  btn.textContent = (open ? '▼' : '▶') + ' 月度統計';
+  if (open) renderMonthly();
+}
+
+function renderMonthly() {
+  const months = [...new Set(allTrades.map(t => t.date.slice(0, 7)))].sort().reverse();
+  const tbody = document.getElementById('monthly-tbody');
+  tbody.innerHTML = months.map(m => {
+    const ts = allTrades.filter(t => t.date.startsWith(m));
+    const closed = ts.filter(t => ['止盈','止損','已平倉'].includes(t.status));
+    const wins = ts.filter(t => t.status === '止盈').length;
+    const losses = ts.filter(t => t.status === '止損').length;
+    const manual = ts.filter(t => t.status === '已平倉').length;
+    const wr = closed.length ? (wins / closed.length * 100).toFixed(0) + '%' : '-';
+    const pnl = closed.reduce((s, t) => s + (t.pnl || 0), 0);
+    const fees = ts.reduce((s, t) => s + (t.fee || 0), 0);
+    const net = pnl - fees;
+    const pnlStr = pnl ? (pnl > 0 ? '+' : '') + pnl.toFixed(2) + ' U' : '-';
+    const feeStr = fees ? fees.toFixed(2) + ' U' : '-';
+    const netStr = (pnl || fees) ? (net > 0 ? '+' : '') + net.toFixed(2) + ' U' : '-';
+    const netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--text)';
+    return `<tr>
+      <td><span class="m-link" onclick="jumpMonth('${m}')">${m.replace('-','/')}</span></td>
+      <td>${ts.length}</td>
+      <td style="color:var(--green)">${wins}</td>
+      <td style="color:var(--red)">${losses}</td>
+      <td style="color:var(--yellow)">${manual}</td>
+      <td>${wr}</td>
+      <td style="color:${pnl > 0 ? 'var(--green)' : pnl < 0 ? 'var(--red)' : 'var(--text)'}">${pnlStr}</td>
+      <td style="color:var(--text2)">${feeStr}</td>
+      <td style="color:${netColor}">${netStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+function jumpMonth(m) {
+  currentMonth = m;
+  document.getElementById('month-select').value = m;
+  renderTable();
+  window.scrollTo({ top: document.getElementById('month-select').offsetTop - 80, behavior: 'smooth' });
 }
 
 function setFilter(f, btn) {
