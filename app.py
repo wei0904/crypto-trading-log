@@ -142,11 +142,12 @@ def get_stats():
         q = q.filter_by(trader=trader)
     trades = q.all()
     closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
-    wins = [t for t in trades if t.status == '止盈']
-    losses = [t for t in trades if t.status == '止損']
+    settled = [t for t in closed if t.pnl is not None]
+    wins = [t for t in settled if (t.pnl - (t.fee or 0)) > 0]
+    losses = [t for t in settled if (t.pnl - (t.fee or 0)) <= 0]
     total_pnl = sum(t.pnl for t in closed if t.pnl)
     total_fees = sum(t.fee for t in trades if t.fee)
-    win_rate = round(len(wins) / len(closed) * 100, 1) if closed else 0
+    win_rate = round(len(wins) / len(settled) * 100, 1) if settled else 0
     rr_vals = [t.rr_ratio for t in trades if t.rr_ratio]
     avg_rr = round(sum(rr_vals) / len(rr_vals), 2) if rr_vals else 0
     return jsonify({
