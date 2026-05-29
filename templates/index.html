@@ -892,9 +892,24 @@ async function submitTrade() {
     return;
   }
 
-  if (editId) delete tradeImageCache[editId];
+  const saved = await res.json();
+  // Add has_image flags (server returns full trade, list uses flags)
+  saved.has_image = !!saved.image_data;
+  saved.has_image2 = !!saved.image_data2;
+  delete saved.image_data;
+  delete saved.image_data2;
+
+  if (editId) {
+    delete tradeImageCache[editId];
+    const idx = allTrades.findIndex(t => t.id === editId);
+    if (idx !== -1) allTrades[idx] = saved;
+  } else {
+    allTrades.unshift(saved);
+  }
+
   closeModal();
-  loadTrades();
+  renderTable();
+  loadStats();
 }
 
 async function quickManual(id) {
