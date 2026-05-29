@@ -241,7 +241,7 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
 
   .date-cell { color: var(--text2); font-size: 11px; }
-  .price-cell { color: var(--text); font-size: 12px; }
+  .price-cell { color: var(--text); font-size: 12px; text-align: center; }
   .condition-cell { max-width: 200px; cursor: pointer; }
   .condition-cell .c-inner { color: var(--text2); font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .condition-cell.expanded .c-inner { -webkit-line-clamp: unset; color: var(--text); }
@@ -407,15 +407,15 @@
           <th>日期 / 時間</th>
           <th>幣種</th>
           <th>方向</th>
-          <th>進場價</th>
-          <th>止盈</th>
-          <th>止損</th>
-          <th>盈虧比</th>
-          <th>止損金額</th>
+          <th style="text-align:center">進場價</th>
+          <th style="text-align:center">止盈</th>
+          <th style="text-align:center">止損</th>
+          <th style="text-align:center">盈虧比</th>
+          <th style="text-align:center">止損金額</th>
           <th>條件</th>
-          <th>獲利/虧損</th>
-          <th>狀態</th>
-          <th>操作</th>
+          <th style="text-align:center">獲利/虧損</th>
+          <th style="text-align:center">狀態</th>
+          <th style="text-align:center">操作</th>
         </tr>
       </thead>
       <tbody id="trade-tbody">
@@ -809,13 +809,13 @@ function renderTable() {
       <td class="price-cell">${t.entry_price}</td>
       <td class="price-cell" style="color:var(--green)">${t.take_profit}</td>
       <td class="price-cell" style="color:var(--red)">${t.stop_loss}</td>
-      <td>${rr}</td>
-      <td class="price-cell" style="color:var(--red)">${t.risk_amount ? t.risk_amount + 'U' : '-'}</td>
+      <td style="text-align:center">${rr}</td>
+      <td class="price-cell" style="color:var(--red);text-align:center">${t.risk_amount ? t.risk_amount + 'U' : '-'}</td>
       <td class="condition-cell" onclick="this.classList.toggle('expanded')"><div class="c-inner">${t.condition || '-'}</div></td>
-      <td>${pnl}</td>
-      <td><span class="status-badge ${statusClass}">${t.status}</span></td>
-      <td>
-        <div class="action-btns">
+      <td style="text-align:center">${pnl}</td>
+      <td style="text-align:center"><span class="status-badge ${statusClass}">${t.status}</span></td>
+      <td style="text-align:center">
+        <div class="action-btns" style="justify-content:center">
           ${t.status === '進行中' ? `
             <button class="action-btn tp" onclick="quickClose(${t.id}, '止盈')">止盈</button>
             <button class="action-btn sl" onclick="quickClose(${t.id}, '止損')">止損</button>
