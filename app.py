@@ -144,6 +144,7 @@ def get_stats():
     closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
     wins = [t for t in trades if t.status == '止盈']
     losses = [t for t in trades if t.status == '止損']
+    manual = [t for t in trades if t.status == '已平倉']
     total_pnl = sum(t.pnl for t in closed if t.pnl)
     total_fees = sum(t.fee for t in trades if t.fee)
     win_rate = round(len(wins) / len(closed) * 100, 1) if closed else 0
@@ -155,6 +156,7 @@ def get_stats():
         'active': len([t for t in trades if t.status == '進行中']),
         'wins': len(wins),
         'losses': len(losses),
+        'manual': len(manual),
         'win_rate': win_rate,
         'total_pnl': round(total_pnl, 2),
         'total_fees': round(total_fees, 2),

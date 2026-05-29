@@ -343,11 +343,13 @@
       <div class="stat-value" id="stat-winrate">-%</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">盈 / 虧</div>
+      <div class="stat-label">盈 / 虧 / 平</div>
       <div class="stat-value" style="font-size:16px">
         <span id="stat-wins" style="color:var(--green)">-</span>
         <span style="color:var(--text2);font-size:14px"> / </span>
         <span id="stat-losses" style="color:var(--red)">-</span>
+        <span style="color:var(--text2);font-size:14px"> / </span>
+        <span id="stat-manual" style="color:var(--yellow)">-</span>
       </div>
     </div>
     <div class="stat-card">
@@ -371,6 +373,9 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn primary" onclick="openModal()">+ 新增交易</button>
+    <select id="month-select" onchange="setMonth(this.value)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;cursor:pointer">
+      <option value="ALL">全部月份</option>
+    </select>
     <div class="filter-group">
       <button class="filter-btn active" onclick="setFilter('ALL', this)">ALL</button>
       <button class="filter-btn" onclick="setFilter('進行中', this)">進行中</button>
@@ -534,6 +539,7 @@ function coinBadge(symbol) {
 
 let allTrades = [];
 let currentFilter = 'ALL';
+let currentMonth = 'ALL';
 let editId = null;
 let currentDir = 'LONG';
 let editTradeRisk = null;
@@ -621,6 +627,7 @@ async function loadTrades() {
     const res = await fetch('/api/trades');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     allTrades = await res.json();
+    updateMonthSelect();
     renderTable();
     loadStats();
   } catch (err) {
@@ -638,6 +645,7 @@ async function loadStats() {
   document.getElementById('stat-active').textContent = s.active;
   document.getElementById('stat-wins').textContent = s.wins;
   document.getElementById('stat-losses').textContent = s.losses;
+  document.getElementById('stat-manual').textContent = s.manual;
   document.getElementById('stat-rr').textContent = s.avg_rr ? s.avg_rr + 'R' : '-';
 
   const wr = document.getElementById('stat-winrate');
@@ -662,8 +670,23 @@ function setFilter(f, btn) {
   renderTable();
 }
 
+function setMonth(m) {
+  currentMonth = m;
+  renderTable();
+}
+
+function updateMonthSelect() {
+  const months = [...new Set(allTrades.map(t => t.date.slice(0, 7)))].sort().reverse();
+  const sel = document.getElementById('month-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="ALL">全部月份</option>' +
+    months.map(m => `<option value="${m}">${m.replace('-', '/')}</option>`).join('');
+  sel.value = months.includes(cur) ? cur : 'ALL';
+}
+
 function renderTable() {
-  const trades = currentFilter === 'ALL' ? allTrades : allTrades.filter(t => t.status === currentFilter);
+  let trades = currentMonth === 'ALL' ? allTrades : allTrades.filter(t => t.date.startsWith(currentMonth));
+  trades = currentFilter === 'ALL' ? trades : trades.filter(t => t.status === currentFilter);
 
   const tbody = document.getElementById('trade-tbody');
   const cards = document.getElementById('trade-cards');
