@@ -673,29 +673,39 @@ async function loadTrades() {
   }
 }
 
-async function loadStats() {
-  const res = await fetch('/api/stats');
-  const s = await res.json();
-  document.getElementById('stat-total').textContent = s.total;
-  document.getElementById('stat-active').textContent = s.active;
-  document.getElementById('stat-wins').textContent = s.wins;
-  document.getElementById('stat-losses').textContent = s.losses;
-  document.getElementById('stat-manual').textContent = s.manual;
-  document.getElementById('stat-rr').textContent = s.avg_rr ? s.avg_rr + 'R' : '-';
+function loadStats() {
+  const ts = currentMonth === 'ALL' ? allTrades : allTrades.filter(t => t.date.startsWith(currentMonth));
+  const closed = ts.filter(t => ['止盈','止損','已平倉'].includes(t.status));
+  const wins = ts.filter(t => t.status === '止盈').length;
+  const losses = ts.filter(t => t.status === '止損').length;
+  const manual = ts.filter(t => t.status === '已平倉').length;
+  const win_rate = closed.length ? Math.round(wins / closed.length * 1000) / 10 : 0;
+  const rr_vals = ts.filter(t => t.rr_ratio).map(t => t.rr_ratio);
+  const avg_rr = rr_vals.length ? Math.round(rr_vals.reduce((a,b) => a+b,0) / rr_vals.length * 100) / 100 : 0;
+  const total_pnl = Math.round(closed.reduce((s,t) => s + (t.pnl||0), 0) * 100) / 100;
+  const total_fees = Math.round(ts.reduce((s,t) => s + (t.fee||0), 0) * 100) / 100;
+  const net_pnl = Math.round((total_pnl - total_fees) * 100) / 100;
+
+  document.getElementById('stat-total').textContent = ts.length;
+  document.getElementById('stat-active').textContent = ts.filter(t => t.status === '進行中').length;
+  document.getElementById('stat-wins').textContent = wins;
+  document.getElementById('stat-losses').textContent = losses;
+  document.getElementById('stat-manual').textContent = manual;
+  document.getElementById('stat-rr').textContent = avg_rr ? avg_rr + 'R' : '-';
 
   const wr = document.getElementById('stat-winrate');
-  wr.textContent = s.win_rate + '%';
-  wr.className = 'stat-value ' + (s.win_rate >= 50 ? 'positive' : s.win_rate > 0 ? 'negative' : '');
+  wr.textContent = win_rate + '%';
+  wr.className = 'stat-value ' + (win_rate >= 50 ? 'positive' : win_rate > 0 ? 'negative' : '');
 
   const pnl = document.getElementById('stat-pnl');
-  pnl.textContent = (s.total_pnl >= 0 ? '+' : '') + s.total_pnl + ' U';
-  pnl.className = 'stat-value ' + (s.total_pnl > 0 ? 'positive' : s.total_pnl < 0 ? 'negative' : '');
+  pnl.textContent = (total_pnl >= 0 ? '+' : '') + total_pnl + ' U';
+  pnl.className = 'stat-value ' + (total_pnl > 0 ? 'positive' : total_pnl < 0 ? 'negative' : '');
 
-  document.getElementById('stat-fees').textContent = s.total_fees > 0 ? '-' + s.total_fees + ' U' : '-';
+  document.getElementById('stat-fees').textContent = total_fees > 0 ? '-' + total_fees + ' U' : '-';
 
   const netpnl = document.getElementById('stat-netpnl');
-  netpnl.textContent = (s.net_pnl >= 0 ? '+' : '') + s.net_pnl + ' U';
-  netpnl.className = 'stat-value ' + (s.net_pnl > 0 ? 'positive' : s.net_pnl < 0 ? 'negative' : '');
+  netpnl.textContent = (net_pnl >= 0 ? '+' : '') + net_pnl + ' U';
+  netpnl.className = 'stat-value ' + (net_pnl > 0 ? 'positive' : net_pnl < 0 ? 'negative' : '');
 }
 
 function toggleMonthly() {
@@ -755,6 +765,7 @@ function setFilter(f, btn) {
 function setMonth(m) {
   currentMonth = m;
   renderTable();
+  loadStats();
 }
 
 function updateMonthSelect() {
