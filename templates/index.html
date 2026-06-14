@@ -352,8 +352,12 @@
       <div class="stat-value neutral" id="stat-active">-</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">勝率</div>
+      <div class="stat-label">當月勝率</div>
       <div class="stat-value" id="stat-winrate">-%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">總勝率</div>
+      <div class="stat-value" id="stat-total-winrate">-%</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">盈 / 虧 / 平</div>
@@ -553,7 +557,8 @@ function coinBadge(symbol) {
 
 let allTrades = [];
 let currentFilter = 'ALL';
-let currentMonth = 'ALL';
+const _todayMonth = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
+let currentMonth = _todayMonth;
 let editId = null;
 let currentDir = 'LONG';
 let editTradeRisk = null;
@@ -678,6 +683,13 @@ function loadStats() {
   wr.textContent = win_rate + '%';
   wr.className = 'stat-value ' + (win_rate >= 50 ? 'positive' : win_rate > 0 ? 'negative' : '');
 
+  const allClosed = allTrades.filter(t => ['止盈','止損','已平倉'].includes(t.status));
+  const allWins = allTrades.filter(t => t.status === '止盈').length;
+  const total_wr = allClosed.length ? Math.round(allWins / allClosed.length * 1000) / 10 : 0;
+  const twr = document.getElementById('stat-total-winrate');
+  twr.textContent = total_wr + '%';
+  twr.className = 'stat-value ' + (total_wr >= 50 ? 'positive' : total_wr > 0 ? 'negative' : '');
+
   const pnl = document.getElementById('stat-pnl');
   pnl.textContent = (total_pnl >= 0 ? '+' : '') + total_pnl + ' U';
   pnl.className = 'stat-value ' + (total_pnl > 0 ? 'positive' : total_pnl < 0 ? 'negative' : '');
@@ -730,7 +742,15 @@ function updateMonthSelect() {
   const cur = sel.value;
   sel.innerHTML = '<option value="ALL">全部月份</option>' +
     months.map(m => `<option value="${m}">${m.replace('-', '/')}</option>`).join('');
-  sel.value = months.includes(cur) ? cur : 'ALL';
+  if (months.includes(cur)) {
+    sel.value = cur;
+  } else if (months.includes(_todayMonth)) {
+    sel.value = _todayMonth;
+    currentMonth = _todayMonth;
+  } else {
+    sel.value = 'ALL';
+    currentMonth = 'ALL';
+  }
 }
 
 function renderTable() {
