@@ -566,6 +566,7 @@ let editTradeRR = null;
 let imgStore = { img1: null, img2: null };
 const tradeImageCache = {};
 let feeManuallyEdited = false;
+let isSubmitting = false;
 
 // Live clock
 function updateClock() {
@@ -948,6 +949,7 @@ function closeModal() {
 }
 
 async function submitTrade() {
+  if (isSubmitting) return;
   const coin = document.getElementById('f-coin').value.trim();
   const entry = document.getElementById('f-entry').value;
   const tp = document.getElementById('f-tp').value;
@@ -957,6 +959,8 @@ async function submitTrade() {
     alert('幣種、進場價、止盈、止損為必填');
     return;
   }
+
+  isSubmitting = true;
 
   const imageData = imgStore.img1 || null;
   const imageData2 = imgStore.img2 || null;
@@ -990,6 +994,7 @@ async function submitTrade() {
 
   if (!res.ok) {
     const err = await res.text();
+    isSubmitting = false;
     alert('儲存失敗：' + err);
     return;
   }
@@ -1009,6 +1014,7 @@ async function submitTrade() {
     allTrades.unshift(saved);
   }
 
+  isSubmitting = false;
   closeModal();
   renderTable();
   loadStats();
