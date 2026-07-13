@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WEI 的交易紀錄</title>
+<title>CRYPTO TRADING LOG</title>
 <link rel="manifest" href="/static/manifest.json">
 <meta name="theme-color" content="#050a0e">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -331,7 +331,7 @@
     <div class="logo">
       <div class="logo-icon">₿</div>
       <div>
-        <h1 id="typing-title"></h1>
+        <h1>CRYPTO LOG</h1>
         <span>wei的交易紀錄</span>
       </div>
     </div>
@@ -1199,21 +1199,6 @@ async function syncBingX() {
     btn.disabled = false;
   }
 }
-
-// 打字動態效果
-(function() {
-  const text = 'WEI 的交易紀錄';
-  const el = document.getElementById('typing-title');
-  let i = 0;
-  function type() {
-    if (i <= text.length) {
-      el.textContent = text.slice(0, i) + (i < text.length ? '|' : '');
-      i++;
-      setTimeout(type, i === text.length + 1 ? 0 : 100);
-    }
-  }
-  type();
-})();
 
 loadTrades();
 initFeeRateDisplay();
