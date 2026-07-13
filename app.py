@@ -1,0 +1,248 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+import hmac
+import hashlib
+import time
+import requests as rq
+from flask import Flask, render_template, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+BINGX_API_KEY = os.environ.get('BINGX_API_KEY', '')
+BINGX_SECRET = os.environ.get('BINGX_SECRET', '')
+BINGX_BASE = 'https://open-api.bingx.com'
+
+app = Flask(__name__)
+
+db_url = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+
+class Trade(db.Model):
+    __tablename__ = 'trades'
+    id = db.Column(db.Integer, primary_key=True)
+    trader = db.Column(db.String(20), default='我')
+    date = db.Column(db.String(20), nullable=False)
+    coin = db.Column(db.String(20), nullable=False)
+    direction = db.Column(db.String(10), nullable=False)
+    entry_price = db.Column(db.Float, nullable=False)
+    take_profit = db.Column(db.Float, nullable=False)
+    stop_loss = db.Column(db.Float, nullable=False)
+    rr_ratio = db.Column(db.Float)
+    trade_time = db.Column(db.String(10))
+    risk_amount = db.Column(db.Float)
+    condition = db.Column(db.Text)
+    pnl = db.Column(db.Float)
+    status = db.Column(db.String(20), default='進行中')
+    notes = db.Column(db.Text)
+    image_data = db.Column(db.Text)
+    image_data2 = db.Column(db.Text)
+    fee = db.Column(db.Float)
+    created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+
+    def to_dict(self, include_images=True):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        if not include_images:
+            d.pop('image_data', None)
+            d.pop('image_data2', None)
+            d['has_image'] = bool(self.image_data)
+            d['has_image2'] = bool(self.image_data2)
+        return d
+
+
+def calc_rr(entry, tp, sl, direction):
+    reward = (tp - entry) if direction == 'LONG' else (entry - tp)
+    risk = (entry - sl) if direction == 'LONG' else (sl - entry)
+    return round(reward / risk, 2) if risk != 0 else None
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/api/debug')
+def debug_db():
+    keys = [k for k in os.environ if not k.startswith('PATH') and 'SECRET' not in k and 'PASSWORD' not in k]
+    return jsonify({'computed': db_url[:40], 'env_keys': sorted(keys)})
+
+
+@app.route('/api/trades', methods=['GET'])
+def get_trades():
+    trades = Trade.query.order_by(Trade.date.desc(), Trade.id.desc()).all()
+    return jsonify([t.to_dict(include_images=False) for t in trades])
+
+
+@app.route('/api/trades', methods=['POST'])
+def add_trade():
+    try:
+        d = request.json
+        entry, tp, sl = float(d['entry_price']), float(d['take_profit']), float(d['stop_loss'])
+        trade = Trade(
+            trader=d.get('trader', '我'),
+            date=d.get('date', datetime.now().strftime('%Y-%m-%d')),
+            coin=d['coin'].upper(),
+            direction=d['direction'],
+            entry_price=entry,
+            take_profit=tp,
+            stop_loss=sl,
+            rr_ratio=calc_rr(entry, tp, sl, d['direction']),
+            trade_time=d.get('trade_time', ''),
+            risk_amount=d.get('risk_amount'),
+            condition=d.get('condition', ''),
+            pnl=d.get('pnl'),
+            status=d.get('status', '進行中'),
+            notes=d.get('notes', ''),
+            image_data=d.get('image_data'),
+            image_data2=d.get('image_data2'),
+        )
+        db.session.add(trade)
+        db.session.commit()
+        return jsonify(trade.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return str(e), 500
+
+
+@app.route('/api/trades/<int:trade_id>', methods=['GET'])
+def get_trade(trade_id):
+    trade = Trade.query.get_or_404(trade_id)
+    return jsonify(trade.to_dict())
+
+
+@app.route('/api/trades/<int:trade_id>', methods=['PUT'])
+def update_trade(trade_id):
+    try:
+        trade = Trade.query.get_or_404(trade_id)
+        d = request.json
+        float_fields = {'entry_price', 'take_profit', 'stop_loss', 'risk_amount', 'pnl'}
+        for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
+                      'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes', 'image_data', 'image_data2', 'fee']:
+            if field in d:
+                val = d[field]
+                if field in float_fields and val is not None:
+                    val = float(val)
+                setattr(trade, field, val)
+        trade.rr_ratio = calc_rr(trade.entry_price, trade.take_profit, trade.stop_loss, trade.direction)
+        db.session.commit()
+        return jsonify(trade.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return str(e), 500
+
+
+@app.route('/api/trades/<int:trade_id>', methods=['DELETE'])
+def delete_trade(trade_id):
+    trade = Trade.query.get_or_404(trade_id)
+    db.session.delete(trade)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/sync-bingx', methods=['POST'])
+def sync_bingx():
+    if not BINGX_API_KEY or not BINGX_SECRET:
+        return jsonify({'error': '請先設定 BINGX_API_KEY 和 BINGX_SECRET 環境變數'}), 400
+    try:
+        ts = str(int(time.time() * 1000))
+        params = {'timestamp': ts}
+        query = '&'.join(f'{k}={v}' for k, v in sorted(params.items()))
+        sig = hmac.new(BINGX_SECRET.encode(), query.encode(), hashlib.sha256).hexdigest()
+        url = f'{BINGX_BASE}/openApi/swap/v2/user/positions?{query}&signature={sig}'
+        resp = rq.get(url, headers={'X-BX-APIKEY': BINGX_API_KEY}, timeout=10)
+        data = resp.json()
+        if data.get('code') != 0:
+            return jsonify({'error': data.get('msg', 'BingX API 錯誤')}), 400
+        positions = data.get('data', [])
+        added, skipped = [], []
+        for pos in positions:
+            size = float(pos.get('positionAmt') or 0)
+            entry = float(pos.get('avgPrice') or 0)
+            if size == 0 or entry == 0:
+                continue
+            symbol = pos.get('symbol', '')
+            coin = symbol.replace('-USDT', '').replace('-USDC', '').replace('-BUSD', '')
+            side = pos.get('positionSide', '')  # LONG or SHORT
+            tp = float(pos.get('takeProfit') or 0)
+            sl = float(pos.get('stopLoss') or 0)
+            existing = Trade.query.filter_by(coin=coin, direction=side, entry_price=entry, status='進行中').first()
+            if existing:
+                skipped.append(coin)
+                continue
+            trade = Trade(
+                coin=coin,
+                direction=side,
+                entry_price=entry,
+                take_profit=tp,
+                stop_loss=sl,
+                rr_ratio=calc_rr(entry, tp, sl, side) if tp and sl else None,
+                date=datetime.now().strftime('%Y-%m-%d'),
+                trade_time=datetime.now().strftime('%H:%M'),
+                status='進行中',
+            )
+            db.session.add(trade)
+            added.append(coin)
+        db.session.commit()
+        return jsonify({'added': added, 'skipped': skipped})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    trader = request.args.get('trader')
+    q = Trade.query
+    if trader:
+        q = q.filter_by(trader=trader)
+    trades = q.all()
+    closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
+    wins = [t for t in trades if t.status == '止盈']
+    losses = [t for t in trades if t.status == '止損']
+    manual = [t for t in trades if t.status == '已平倉']
+    total_pnl = sum(t.pnl for t in closed if t.pnl)
+    total_fees = sum(t.fee for t in trades if t.fee)
+    win_rate = round(len(wins) / len(closed) * 100, 1) if closed else 0
+    rr_vals = [t.rr_ratio for t in trades if t.rr_ratio]
+    avg_rr = round(sum(rr_vals) / len(rr_vals), 2) if rr_vals else 0
+    return jsonify({
+        'total': len(trades),
+        'closed': len(closed),
+        'active': len([t for t in trades if t.status == '進行中']),
+        'wins': len(wins),
+        'losses': len(losses),
+        'manual': len(manual),
+        'win_rate': win_rate,
+        'total_pnl': round(total_pnl, 2),
+        'total_fees': round(total_fees, 2),
+        'net_pnl': round(total_pnl - total_fees, 2),
+        'avg_rr': avg_rr,
+    })
+
+
+with app.app_context():
+    try:
+        db.create_all()
+        with db.engine.connect() as conn:
+            if db_url.startswith('postgresql'):
+                existing = {row[0] for row in conn.execute(
+                    db.text("SELECT column_name FROM information_schema.columns WHERE table_name='trades'")
+                )}
+            else:
+                existing = {row[1] for row in conn.execute(db.text("PRAGMA table_info(trades)"))}
+            model_cols = {c.name: c for c in Trade.__table__.columns if c.name != 'id'}
+            for col_name, col in model_cols.items():
+                if col_name not in existing:
+                    col_type = str(col.type.compile(db.engine.dialect))
+                    conn.execute(db.text(f'ALTER TABLE trades ADD COLUMN {col_name} {col_type}'))
+                    conn.commit()
+    except Exception as e:
+        print(f'DB init error: {e}')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
