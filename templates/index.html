@@ -1177,32 +1177,30 @@ document.getElementById('modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
-async function syncBingX() {
+async function syncBingX(silent = false) {
   const btn = document.getElementById('sync-btn');
-  btn.textContent = '同步中...';
-  btn.disabled = true;
+  if (!silent) { btn.textContent = '同步中...'; btn.disabled = true; }
   try {
     const res = await fetch('/api/sync-bingx', { method: 'POST' });
     const data = await res.json();
     if (data.error) {
-      alert('同步失敗：' + data.error);
+      if (!silent) alert('同步失敗：' + data.error);
     } else {
-      const addedMsg = data.added.length ? `新增：${data.added.join(', ')}` : '無新持倉';
-      const skippedMsg = data.skipped.length ? `\n已存在（略過）：${data.skipped.join(', ')}` : '';
-      alert(addedMsg + skippedMsg);
-      loadTrades();
+      if (data.added.length) {
+        loadTrades();
+        if (!silent) alert(`新增：${data.added.join(', ')}`);
+      }
     }
   } catch (e) {
-    alert('同步失敗：' + e.message);
+    if (!silent) alert('同步失敗：' + e.message);
   } finally {
-    btn.textContent = '⇄ 同步 BingX 持倉';
-    btn.disabled = false;
+    if (!silent) { btn.textContent = '⇄ 同步 BingX 持倉'; btn.disabled = false; }
   }
 }
 
 loadTrades();
 initFeeRateDisplay();
-setInterval(syncBingX, 30000); // 每 30 秒自動同步一次
+setInterval(() => syncBingX(true), 30000); // 每 30 秒靜默同步
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/static/sw.js');
