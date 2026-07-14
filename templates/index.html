@@ -12,21 +12,21 @@
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <style>
   :root {
-    --bg: #f7f3eb;
-    --bg2: #ede7d8;
-    --bg3: #e2d9c6;
-    --border: #c9bda6;
-    --cyan: #5e7d6a;
-    --green: #4a7059;
-    --red: #8b3d3d;
-    --yellow: #a67c2a;
-    --text: #2a1f14;
-    --text2: #7a6d5c;
-    --long: #4a7059;
-    --short: #8b3d3d;
-    --glow-cyan: 0 1px 4px rgba(94,125,106,0.2);
-    --glow-green: 0 1px 4px rgba(74,112,89,0.2);
-    --glow-red: 0 1px 4px rgba(139,61,61,0.2);
+    --bg: #1c1917;
+    --bg2: #242120;
+    --bg3: #2e2a28;
+    --border: #3d3733;
+    --cyan: #c4a265;
+    --green: #6fa37d;
+    --red: #b86b6b;
+    --yellow: #c9952a;
+    --text: #e8ddd0;
+    --text2: #8a7f72;
+    --long: #6fa37d;
+    --short: #b86b6b;
+    --glow-cyan: 0 1px 4px rgba(196,162,101,0.2);
+    --glow-green: 0 1px 4px rgba(111,163,125,0.2);
+    --glow-red: 0 1px 4px rgba(184,107,107,0.2);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,20 +34,12 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Georgia', 'Noto Serif SC', 'Noto Serif', '宋體', serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
   }
 
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.6;
-  }
+  body::before { display: none; }
 
   .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 20px; }
 
@@ -326,11 +318,7 @@
     position: fixed; inset: 0; background: var(--bg);
     z-index: 9999; display: flex; align-items: center; justify-content: center;
   }
-  #auth-overlay::before {
-    content: ''; position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none; opacity: 0.6;
-  }
+  #auth-overlay::before { display: none; }
   .auth-box {
     background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
     padding: 40px; width: 360px; max-width: calc(100vw - 40px); position: relative; z-index: 1;
