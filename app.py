@@ -144,21 +144,45 @@ def delete_trade(trade_id):
     return jsonify({'ok': True})
 
 
+def bingx_get(path, params={}):
+    ts = str(int(time.time() * 1000))
+    p = dict(params)
+    p['timestamp'] = ts
+    query = '&'.join(f'{k}={v}' for k, v in sorted(p.items()))
+    sig = hmac.new(BINGX_SECRET.encode(), query.encode(), hashlib.sha256).hexdigest()
+    url = f'{BINGX_BASE}{path}?{query}&signature={sig}'
+    resp = rq.get(url, headers={'X-BX-APIKEY': BINGX_API_KEY}, timeout=10)
+    return resp.json()
+
+
 @app.route('/api/sync-bingx', methods=['POST'])
 def sync_bingx():
     if not BINGX_API_KEY or not BINGX_SECRET:
         return jsonify({'error': '請先設定 BINGX_API_KEY 和 BINGX_SECRET 環境變數'}), 400
     try:
-        ts = str(int(time.time() * 1000))
-        params = {'timestamp': ts}
-        query = '&'.join(f'{k}={v}' for k, v in sorted(params.items()))
-        sig = hmac.new(BINGX_SECRET.encode(), query.encode(), hashlib.sha256).hexdigest()
-        url = f'{BINGX_BASE}/openApi/swap/v2/user/positions?{query}&signature={sig}'
-        resp = rq.get(url, headers={'X-BX-APIKEY': BINGX_API_KEY}, timeout=10)
-        data = resp.json()
-        if data.get('code') != 0:
-            return jsonify({'error': data.get('msg', 'BingX API 錯誤')}), 400
-        positions = data.get('data', [])
+        # 取得持倉
+        pos_data = bingx_get('/openApi/swap/v2/user/positions')
+        if pos_data.get('code') != 0:
+            return jsonify({'error': pos_data.get('msg', 'BingX API 錯誤')}), 400
+
+        # 取得未成交訂單（含止盈止損掛單）
+        order_data = bingx_get('/openApi/swap/v2/trade/openOrders')
+        open_orders = order_data.get('data', {}).get('orders', []) if order_data.get('code') == 0 else []
+
+        # 建立 {symbol_side: {tp, sl}} 對照表
+        tpsl_map = {}
+        for o in open_orders:
+            sym = o.get('symbol', '')
+            o_side = o.get('positionSide', '')
+            key = f"{sym}_{o_side}"
+            o_type = o.get('type', '')
+            stop_price = float(o.get('stopPrice') or 0)
+            if o_type in ('TAKE_PROFIT_MARKET', 'TAKE_PROFIT') and stop_price:
+                tpsl_map.setdefault(key, {})['tp'] = stop_price
+            elif o_type in ('STOP_MARKET', 'STOP') and stop_price:
+                tpsl_map.setdefault(key, {})['sl'] = stop_price
+
+        positions = pos_data.get('data', [])
         added, skipped = [], []
         for pos in positions:
             size = float(pos.get('positionAmt') or 0)
@@ -166,10 +190,11 @@ def sync_bingx():
             if size == 0 or entry == 0:
                 continue
             symbol = pos.get('symbol', '')
+            side = pos.get('positionSide', '')
             coin = symbol.replace('-USDT', '').replace('-USDC', '').replace('-BUSD', '')
-            side = pos.get('positionSide', '')  # LONG or SHORT
-            tp = float(pos.get('takeProfit') or 0)
-            sl = float(pos.get('stopLoss') or 0)
+            key = f"{symbol}_{side}"
+            tp = tpsl_map.get(key, {}).get('tp', 0)
+            sl = tpsl_map.get(key, {}).get('sl', 0)
             existing = Trade.query.filter_by(coin=coin, direction=side, entry_price=entry, status='進行中').first()
             if existing:
                 skipped.append(coin)
