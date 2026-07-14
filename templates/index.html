@@ -60,6 +60,7 @@
   .logo h1 { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); }
   .logo span { font-size: 11px; color: var(--text2); letter-spacing: 1px; display: block; font-style: italic; }
 
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .header-time { text-align: right; font-size: 12px; color: var(--text2); letter-spacing: 1px; }
   #live-time { font-size: 18px; color: var(--cyan); font-weight: bold; display: block; }
 
@@ -243,7 +244,7 @@
     .container { padding: 12px; }
 
     header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 0 16px; margin-bottom: 16px; }
-    .header-time { align-self: flex-end; margin-top: -36px; }
+    .header-right { align-self: flex-end; margin-top: -52px; }
     #live-time { font-size: 15px; }
     .logo h1 { font-size: 17px; letter-spacing: 2px; }
     .logo-icon { width: 32px; height: 32px; font-size: 15px; }
@@ -255,7 +256,7 @@
     .stat-label { font-size: 9px; }
 
     .toolbar { gap: 8px; flex-wrap: wrap; }
-    .btn { padding: 9px 16px; font-size: 12px; letter-spacing: 1px; flex: 1; text-align: center; }
+    .btn { padding: 9px 12px; font-size: 12px; letter-spacing: 0; flex: 1; text-align: center; min-width: calc(50% - 8px); }
     .filter-group { margin-left: 0; width: 100%; justify-content: space-between; }
     .filter-btn { padding: 7px 0; font-size: 11px; flex: 1; text-align: center; }
 
@@ -398,7 +399,7 @@
         <span id="header-username">交易紀錄</span>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+    <div class="header-right">
       <div class="header-time">
         <span id="live-time">--:--:--</span>
         <span id="live-date" style="font-size:11px;color:var(--text2)"></span>
