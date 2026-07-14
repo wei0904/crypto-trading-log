@@ -452,13 +452,13 @@
 
   <!-- Tab Bar -->
   <nav class="tab-bar">
-    <button class="tab-item active" data-tab="records" onclick="switchTab('records', this)">
-      <span class="tab-icon">&#9776;</span>
-      <span>紀錄</span>
-    </button>
-    <button class="tab-item" data-tab="dashboard" onclick="switchTab('dashboard', this)">
+    <button class="tab-item active" data-tab="dashboard" onclick="switchTab('dashboard', this)">
       <span class="tab-icon">&#9688;</span>
       <span>總覽</span>
+    </button>
+    <button class="tab-item" data-tab="records" onclick="switchTab('records', this)">
+      <span class="tab-icon">&#9776;</span>
+      <span>紀錄</span>
     </button>
     <button class="tab-item" data-tab="ai" onclick="switchTab('ai', this)">
       <span class="tab-icon">&#10024;</span>
@@ -471,7 +471,7 @@
   </nav>
 
   <!-- Dashboard Tab -->
-  <div class="tab-page" id="tab-dashboard">
+  <div class="tab-page active" id="tab-dashboard">
 
   <!-- Stats -->
   <div class="stats-grid" id="stats-grid">
@@ -546,7 +546,7 @@
   </div><!-- /tab-dashboard -->
 
   <!-- Records Tab -->
-  <div class="tab-page active" id="tab-records">
+  <div class="tab-page" id="tab-records">
 
   <!-- Toolbar -->
   <div class="toolbar">
@@ -977,7 +977,7 @@ async function loadTrades() {
     updateMonthSelect();
     renderTable();
     loadStats();
-    renderChart('week', document.getElementById('chart-week-btn'));
+    renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
   } catch (err) {
     document.getElementById('trade-tbody').innerHTML =
       `<tr><td colspan="13" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
