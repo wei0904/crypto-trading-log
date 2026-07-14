@@ -205,6 +205,11 @@ def sync_bingx():
             if existing:
                 skipped.append(coin)
                 continue
+            update_ts = pos.get('updateTime')
+            if update_ts:
+                open_dt = datetime.fromtimestamp(int(update_ts) / 1000, tz=TZ)
+            else:
+                open_dt = now_tw()
             trade = Trade(
                 coin=coin,
                 direction=side,
@@ -212,8 +217,8 @@ def sync_bingx():
                 take_profit=tp,
                 stop_loss=sl,
                 rr_ratio=calc_rr(entry, tp, sl, side) if tp and sl else None,
-                date=now_tw().strftime('%Y-%m-%d'),
-                trade_time=now_tw().strftime('%H:%M'),
+                date=open_dt.strftime('%Y-%m-%d'),
+                trade_time=open_dt.strftime('%H:%M'),
                 status='進行中',
             )
             db.session.add(trade)
