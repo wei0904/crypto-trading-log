@@ -114,6 +114,7 @@
     .container { padding-bottom: 72px; }
     .bulk-bar { bottom: 72px; }
     .tab-item { font-size: 10px; padding: 8px 4px; }
+    .tab-icon { font-size: 22px; }
   }
 
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
@@ -718,7 +719,13 @@
       </div>
       <div class="form-group">
         <label>進場條件 / 策略</label>
-        <input type="text" id="f-condition" placeholder="例：突破關鍵壓力位 + RSI 背離">
+        <select id="f-condition-select" onchange="onConditionChange(this)">
+          <option value="">— 選擇策略 —</option>
+          <option value="馬刺指標">馬刺指標</option>
+          <option value="3+1 指標">3+1 指標</option>
+          <option value="其他">其他（自填）</option>
+        </select>
+        <input type="text" id="f-condition" placeholder="輸入自訂條件" style="margin-top:8px;display:none">
       </div>
       <div class="form-group">
         <label>獲利/虧損 (USDT)</label>
@@ -1221,7 +1228,9 @@ function openModal() {
   document.getElementById('f-risk').value = '';
   document.getElementById('f-fee').value = '';
   feeManuallyEdited = false;
+  document.getElementById('f-condition-select').value = '';
   document.getElementById('f-condition').value = '';
+  document.getElementById('f-condition').style.display = 'none';
   document.getElementById('f-pnl').value = '';
   document.getElementById('f-status').value = '進行中';
   document.getElementById('status-group').style.display = 'none';
@@ -1245,7 +1254,7 @@ async function openEdit(id) {
   document.getElementById('f-sl').value = base.stop_loss;
   document.getElementById('f-time').value = base.trade_time || '';
   document.getElementById('f-risk').value = base.risk_amount ?? '';
-  document.getElementById('f-condition').value = base.condition || '';
+  setConditionField(base.condition || '');
   document.getElementById('f-pnl').value = base.pnl ?? '';
   document.getElementById('f-fee').value = base.fee ?? '';
   feeManuallyEdited = base.fee != null;
@@ -1304,7 +1313,7 @@ async function submitTrade() {
     stop_loss: sl,
     trade_time: document.getElementById('f-time').value || null,
     risk_amount: document.getElementById('f-risk').value || null,
-    condition: document.getElementById('f-condition').value,
+    condition: getConditionValue(),
     pnl: document.getElementById('f-pnl').value || null,
     fee: document.getElementById('f-fee').value || null,
     status: document.getElementById('f-status').value,
@@ -1714,6 +1723,45 @@ async function bulkDelete() {
   clearSelection();
   loadTrades();
   showToast(`已刪除 ${ids.length} 筆`, 'var(--red)');
+}
+
+// ── Condition field helpers ──────────────────────────────────
+const PRESET_CONDITIONS = ['馬刺指標', '3+1 指標'];
+
+function onConditionChange(sel) {
+  const custom = document.getElementById('f-condition');
+  if (sel.value === '其他') {
+    custom.style.display = '';
+    custom.value = '';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = '';
+  }
+}
+
+function getConditionValue() {
+  const sel = document.getElementById('f-condition-select');
+  if (sel.value === '其他') return document.getElementById('f-condition').value;
+  return sel.value;
+}
+
+function setConditionField(val) {
+  const sel = document.getElementById('f-condition-select');
+  const custom = document.getElementById('f-condition');
+  if (PRESET_CONDITIONS.includes(val)) {
+    sel.value = val;
+    custom.style.display = 'none';
+    custom.value = '';
+  } else if (val) {
+    sel.value = '其他';
+    custom.style.display = '';
+    custom.value = val;
+  } else {
+    sel.value = '';
+    custom.style.display = 'none';
+    custom.value = '';
+  }
 }
 
 // ── Tab Navigation ──────────────────────────────────────────
