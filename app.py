@@ -78,6 +78,14 @@ def debug_db():
     return jsonify({'computed': db_url[:40], 'env_keys': sorted(keys)})
 
 
+@app.route('/api/debug-sync')
+def debug_sync():
+    pos_data = bingx_get('/openApi/swap/v2/user/positions')
+    order_data = bingx_get('/openApi/swap/v2/trade/openOrders')
+    active_trades = [{'coin': t.coin, 'direction': t.direction, 'entry': t.entry_price} for t in Trade.query.filter_by(status='進行中').all()]
+    return jsonify({'positions': pos_data, 'orders': order_data, 'active_db_trades': active_trades})
+
+
 @app.route('/api/trades', methods=['GET'])
 def get_trades():
     trades = Trade.query.order_by(Trade.date.desc(), Trade.id.desc()).all()
