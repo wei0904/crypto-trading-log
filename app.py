@@ -5,8 +5,10 @@ import hmac
 import hashlib
 import time
 import requests as rq
-from flask import Flask, render_template, request, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -20,8 +22,11 @@ BINGX_SECRET = os.environ.get('BINGX_SECRET', '')
 BINGX_BASE = 'https://open-api.bingx.com'
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'please-change-this-secret-key')
 
-db_url = 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway'
+db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway')
+if db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -29,10 +34,21 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    display_name = db.Column(db.String(50))
+    bingx_api_key = db.Column(db.String(200))
+    bingx_secret = db.Column(db.String(200))
+    created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+
+
 class Trade(db.Model):
     __tablename__ = 'trades'
     id = db.Column(db.Integer, primary_key=True)
-    trader = db.Column(db.String(20), default='我')
+    trader = db.Column(db.String(50), default='我')
     date = db.Column(db.String(20), nullable=False)
     coin = db.Column(db.String(20), nullable=False)
     direction = db.Column(db.String(10), nullable=False)
@@ -61,11 +77,79 @@ class Trade(db.Model):
         return d
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'username' not in session:
+            return jsonify({'error': 'unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
 def calc_rr(entry, tp, sl, direction):
     reward = (tp - entry) if direction == 'LONG' else (entry - tp)
     risk = (entry - sl) if direction == 'LONG' else (sl - entry)
     return round(reward / risk, 2) if risk != 0 else None
 
+
+# ── Auth Routes ────────────────────────────────────────────────────────────────
+
+@app.route('/auth/register', methods=['POST'])
+def register():
+    d = request.json
+    username = (d.get('username') or '').strip().lower()
+    password = d.get('password', '')
+    display_name = (d.get('display_name') or username).strip()
+    if not username or not password:
+        return jsonify({'error': '帳號和密碼為必填'}), 400
+    if len(username) < 3:
+        return jsonify({'error': '帳號至少 3 個字元'}), 400
+    if len(password) < 6:
+        return jsonify({'error': '密碼至少 6 個字元'}), 400
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': '帳號已存在'}), 400
+    user = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        display_name=display_name,
+    )
+    db.session.add(user)
+    db.session.commit()
+    session['username'] = username
+    session['display_name'] = display_name
+    return jsonify({'username': username, 'display_name': display_name}), 201
+
+
+@app.route('/auth/login', methods=['POST'])
+def login():
+    d = request.json
+    username = (d.get('username') or '').strip().lower()
+    password = d.get('password', '')
+    user = User.query.filter_by(username=username).first()
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({'error': '帳號或密碼錯誤'}), 401
+    session['username'] = username
+    session['display_name'] = user.display_name or username
+    return jsonify({'username': username, 'display_name': user.display_name or username})
+
+
+@app.route('/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'ok': True})
+
+
+@app.route('/auth/me')
+def me():
+    if 'username' not in session:
+        return jsonify({'error': 'unauthorized'}), 401
+    return jsonify({
+        'username': session['username'],
+        'display_name': session.get('display_name', session['username']),
+    })
+
+
+# ── App Routes ─────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -79,26 +163,34 @@ def debug_db():
 
 
 @app.route('/api/debug-sync')
+@login_required
 def debug_sync():
-    pos_data = bingx_get('/openApi/swap/v2/user/positions')
-    order_data = bingx_get('/openApi/swap/v2/trade/openOrders')
-    active_trades = [{'coin': t.coin, 'direction': t.direction, 'entry': t.entry_price} for t in Trade.query.filter_by(status='進行中').all()]
+    api_key, secret = get_user_bingx_keys()
+    pos_data = bingx_get('/openApi/swap/v2/user/positions', api_key=api_key, secret=secret)
+    order_data = bingx_get('/openApi/swap/v2/trade/openOrders', api_key=api_key, secret=secret)
+    active_trades = [{'coin': t.coin, 'direction': t.direction, 'entry': t.entry_price}
+                     for t in Trade.query.filter_by(status='進行中', trader=session['username']).all()]
     return jsonify({'positions': pos_data, 'orders': order_data, 'active_db_trades': active_trades})
 
 
 @app.route('/api/trades', methods=['GET'])
+@login_required
 def get_trades():
-    trades = Trade.query.order_by(Trade.date.desc(), Trade.id.desc()).all()
+    trades = (Trade.query
+              .filter_by(trader=session['username'])
+              .order_by(Trade.date.desc(), Trade.id.desc())
+              .all())
     return jsonify([t.to_dict(include_images=False) for t in trades])
 
 
 @app.route('/api/trades', methods=['POST'])
+@login_required
 def add_trade():
     try:
         d = request.json
         entry, tp, sl = float(d['entry_price']), float(d['take_profit']), float(d['stop_loss'])
         trade = Trade(
-            trader=d.get('trader', '我'),
+            trader=session['username'],
             date=d.get('date', datetime.now().strftime('%Y-%m-%d')),
             coin=d['coin'].upper(),
             direction=d['direction'],
@@ -124,18 +216,20 @@ def add_trade():
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['GET'])
+@login_required
 def get_trade(trade_id):
-    trade = Trade.query.get_or_404(trade_id)
+    trade = Trade.query.filter_by(id=trade_id, trader=session['username']).first_or_404()
     return jsonify(trade.to_dict())
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['PUT'])
+@login_required
 def update_trade(trade_id):
     try:
-        trade = Trade.query.get_or_404(trade_id)
+        trade = Trade.query.filter_by(id=trade_id, trader=session['username']).first_or_404()
         d = request.json
         float_fields = {'entry_price', 'take_profit', 'stop_loss', 'risk_amount', 'pnl'}
-        for field in ['trader', 'date', 'coin', 'direction', 'entry_price', 'take_profit',
+        for field in ['date', 'coin', 'direction', 'entry_price', 'take_profit',
                       'stop_loss', 'trade_time', 'risk_amount', 'condition', 'pnl', 'status', 'notes', 'image_data', 'image_data2', 'fee']:
             if field in d:
                 val = d[field]
@@ -151,39 +245,75 @@ def update_trade(trade_id):
 
 
 @app.route('/api/trades/<int:trade_id>', methods=['DELETE'])
+@login_required
 def delete_trade(trade_id):
-    trade = Trade.query.get_or_404(trade_id)
+    trade = Trade.query.filter_by(id=trade_id, trader=session['username']).first_or_404()
     db.session.delete(trade)
     db.session.commit()
     return jsonify({'ok': True})
 
 
-def bingx_get(path, params={}):
+def get_user_bingx_keys():
+    user = User.query.filter_by(username=session['username']).first()
+    api_key = (user.bingx_api_key or '').strip() if user else ''
+    secret = (user.bingx_secret or '').strip() if user else ''
+    return api_key or BINGX_API_KEY, secret or BINGX_SECRET
+
+
+def bingx_get(path, params={}, api_key=None, secret=None):
+    _key = api_key or BINGX_API_KEY
+    _secret = secret or BINGX_SECRET
     ts = str(int(time.time() * 1000))
     p = dict(params)
     p['timestamp'] = ts
     query = '&'.join(f'{k}={v}' for k, v in sorted(p.items()))
-    sig = hmac.new(BINGX_SECRET.encode(), query.encode(), hashlib.sha256).hexdigest()
+    sig = hmac.new(_secret.encode(), query.encode(), hashlib.sha256).hexdigest()
     url = f'{BINGX_BASE}{path}?{query}&signature={sig}'
-    resp = rq.get(url, headers={'X-BX-APIKEY': BINGX_API_KEY}, timeout=10)
+    resp = rq.get(url, headers={'X-BX-APIKEY': _key}, timeout=10)
     return resp.json()
 
 
+@app.route('/api/settings', methods=['GET'])
+@login_required
+def get_settings():
+    user = User.query.filter_by(username=session['username']).first()
+    has_key = bool(user and user.bingx_api_key and user.bingx_api_key.strip())
+    masked = ''
+    if has_key:
+        k = user.bingx_api_key.strip()
+        masked = k[:4] + '*' * (len(k) - 8) + k[-4:]
+    return jsonify({'has_bingx': has_key, 'masked_key': masked})
+
+
+@app.route('/api/settings', methods=['POST'])
+@login_required
+def save_settings():
+    user = User.query.filter_by(username=session['username']).first()
+    if not user:
+        return jsonify({'error': '使用者不存在'}), 404
+    d = request.json
+    if 'bingx_api_key' in d:
+        user.bingx_api_key = d['bingx_api_key'].strip() or None
+    if 'bingx_secret' in d:
+        user.bingx_secret = d['bingx_secret'].strip() or None
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
 @app.route('/api/sync-bingx', methods=['POST'])
+@login_required
 def sync_bingx():
-    if not BINGX_API_KEY or not BINGX_SECRET:
-        return jsonify({'error': '請先設定 BINGX_API_KEY 和 BINGX_SECRET 環境變數'}), 400
+    api_key, secret = get_user_bingx_keys()
+    if not api_key or not secret:
+        return jsonify({'error': '請先在「BingX 設定」中填入你的 API Key 和 Secret'}), 400
     try:
-        # 取得持倉
-        pos_data = bingx_get('/openApi/swap/v2/user/positions')
+        pos_data = bingx_get('/openApi/swap/v2/user/positions', api_key=api_key, secret=secret)
         if pos_data.get('code') != 0:
             return jsonify({'error': pos_data.get('msg', 'BingX API 錯誤')}), 400
 
-        # 取得未成交訂單（含止盈止損掛單）
-        order_data = bingx_get('/openApi/swap/v2/trade/openOrders')
+        order_data = bingx_get('/openApi/swap/v2/trade/openOrders', api_key=api_key, secret=secret)
         open_orders = order_data.get('data', {}).get('orders', []) if order_data.get('code') == 0 else []
 
-        # 建立 {symbol_side: {tp, sl}} 對照表
         tpsl_map = {}
         for o in open_orders:
             sym = o.get('symbol', '')
@@ -197,7 +327,6 @@ def sync_bingx():
                 tpsl_map.setdefault(key, {})['sl'] = stop_price
 
         positions = pos_data.get('data', [])
-        # 建立目前 BingX 有倉位的 key 集合
         active_keys = set()
         for pos in positions:
             if float(pos.get('positionAmt') or 0) != 0:
@@ -205,17 +334,15 @@ def sync_bingx():
 
         added, skipped, auto_closed = [], [], []
 
-        # 檢查平倉：DB 進行中但 BingX 已無倉位
-        active_trades = Trade.query.filter_by(status='進行中').all()
+        active_trades = Trade.query.filter_by(status='進行中', trader=session['username']).all()
         for trade in active_trades:
             symbol = f"{trade.coin}-USDT"
             key = f"{symbol}_{trade.direction}"
             if key in active_keys:
                 continue
-            # 抓實現盈虧
             start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
-            pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50})
-            fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50})
+            pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
+            fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
             pnl_list = pnl_resp.get('data', {}).get('incomes', []) if pnl_resp.get('code') == 0 else []
             fee_list = fee_resp.get('data', {}).get('incomes', []) if fee_resp.get('code') == 0 else []
             pnl = round(sum(float(i.get('income', 0)) for i in pnl_list), 4)
@@ -236,7 +363,7 @@ def sync_bingx():
             key = f"{symbol}_{side}"
             tp = tpsl_map.get(key, {}).get('tp', 0)
             sl = tpsl_map.get(key, {}).get('sl', 0)
-            existing = Trade.query.filter_by(coin=coin, direction=side, entry_price=entry, status='進行中').first()
+            existing = Trade.query.filter_by(coin=coin, direction=side, entry_price=entry, status='進行中', trader=session['username']).first()
             if existing:
                 if tp and existing.take_profit != tp:
                     existing.take_profit = tp
@@ -252,6 +379,7 @@ def sync_bingx():
             else:
                 open_dt = now_tw()
             trade = Trade(
+                trader=session['username'],
                 coin=coin,
                 direction=side,
                 entry_price=entry,
@@ -272,12 +400,9 @@ def sync_bingx():
 
 
 @app.route('/api/stats', methods=['GET'])
+@login_required
 def get_stats():
-    trader = request.args.get('trader')
-    q = Trade.query
-    if trader:
-        q = q.filter_by(trader=trader)
-    trades = q.all()
+    trades = Trade.query.filter_by(trader=session['username']).all()
     closed = [t for t in trades if t.status in ('止盈', '止損', '已平倉')]
     wins = [t for t in trades if t.status == '止盈']
     losses = [t for t in trades if t.status == '止損']
@@ -302,22 +427,27 @@ def get_stats():
     })
 
 
+def migrate_table(conn, table_name, model_cols, is_pg):
+    if is_pg:
+        existing = {row[0] for row in conn.execute(
+            db.text(f"SELECT column_name FROM information_schema.columns WHERE table_name='{table_name}'")
+        )}
+    else:
+        existing = {row[1] for row in conn.execute(db.text(f"PRAGMA table_info({table_name})"))}
+    for col_name, col in model_cols.items():
+        if col_name not in existing:
+            col_type = str(col.type.compile(db.engine.dialect))
+            conn.execute(db.text(f'ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}'))
+            conn.commit()
+
+
 with app.app_context():
     try:
         db.create_all()
+        is_pg = db_url.startswith('postgresql')
         with db.engine.connect() as conn:
-            if db_url.startswith('postgresql'):
-                existing = {row[0] for row in conn.execute(
-                    db.text("SELECT column_name FROM information_schema.columns WHERE table_name='trades'")
-                )}
-            else:
-                existing = {row[1] for row in conn.execute(db.text("PRAGMA table_info(trades)"))}
-            model_cols = {c.name: c for c in Trade.__table__.columns if c.name != 'id'}
-            for col_name, col in model_cols.items():
-                if col_name not in existing:
-                    col_type = str(col.type.compile(db.engine.dialect))
-                    conn.execute(db.text(f'ALTER TABLE trades ADD COLUMN {col_name} {col_type}'))
-                    conn.commit()
+            migrate_table(conn, 'trades', {c.name: c for c in Trade.__table__.columns if c.name != 'id'}, is_pg)
+            migrate_table(conn, 'users', {c.name: c for c in User.__table__.columns if c.name != 'id'}, is_pg)
     except Exception as e:
         print(f'DB init error: {e}')
 

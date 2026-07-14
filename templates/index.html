@@ -12,21 +12,21 @@
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <style>
   :root {
-    --bg: #050a0e;
-    --bg2: #0a1520;
-    --bg3: #0f1e2e;
-    --border: #1a3a5c;
-    --cyan: #00d4ff;
-    --green: #00ff88;
-    --red: #ff3366;
-    --yellow: #ffd700;
-    --text: #c8e6f5;
-    --text2: #6a9ab0;
-    --long: #00ff88;
-    --short: #ff3366;
-    --glow-cyan: 0 0 8px rgba(0,212,255,0.6);
-    --glow-green: 0 0 8px rgba(0,255,136,0.6);
-    --glow-red: 0 0 8px rgba(255,51,102,0.6);
+    --bg: #f7f3eb;
+    --bg2: #ede7d8;
+    --bg3: #e2d9c6;
+    --border: #c9bda6;
+    --cyan: #5e7d6a;
+    --green: #4a7059;
+    --red: #8b3d3d;
+    --yellow: #a67c2a;
+    --text: #2a1f14;
+    --text2: #7a6d5c;
+    --long: #4a7059;
+    --short: #8b3d3d;
+    --glow-cyan: 0 1px 4px rgba(94,125,106,0.2);
+    --glow-green: 0 1px 4px rgba(74,112,89,0.2);
+    --glow-red: 0 1px 4px rgba(139,61,61,0.2);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +34,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Courier New', 'SF Mono', monospace;
+    font-family: 'Georgia', 'Noto Serif SC', 'Noto Serif', '宋體', serif;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -43,12 +43,10 @@
     content: '';
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
+    opacity: 0.6;
   }
 
   .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 20px; }
@@ -61,48 +59,45 @@
   .logo { display: flex; align-items: center; gap: 14px; }
 
   .logo-icon {
-    width: 40px; height: 40px; border: 2px solid var(--cyan); border-radius: 8px;
+    width: 40px; height: 40px; border: 1.5px solid var(--cyan); border-radius: 6px;
     display: flex; align-items: center; justify-content: center; font-size: 20px;
-    box-shadow: var(--glow-cyan), inset 0 0 10px rgba(0,212,255,0.1);
-    animation: pulse-border 3s ease-in-out infinite;
-  }
-  @keyframes pulse-border {
-    0%, 100% { box-shadow: var(--glow-cyan), inset 0 0 10px rgba(0,212,255,0.1); }
-    50% { box-shadow: 0 0 20px rgba(0,212,255,0.8), inset 0 0 20px rgba(0,212,255,0.2); }
+    box-shadow: 0 1px 4px rgba(94,125,106,0.15);
+    background: var(--bg2);
   }
 
-  .logo h1 { font-size: 22px; font-weight: 700; letter-spacing: 4px; color: var(--cyan); text-shadow: var(--glow-cyan); }
-  .logo span { font-size: 11px; color: var(--text2); letter-spacing: 2px; display: block; }
+  .logo h1 { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); }
+  .logo span { font-size: 11px; color: var(--text2); letter-spacing: 1px; display: block; font-style: italic; }
 
   .header-time { text-align: right; font-size: 12px; color: var(--text2); letter-spacing: 1px; }
-  #live-time { font-size: 18px; color: var(--cyan); font-weight: bold; display: block; text-shadow: var(--glow-cyan); }
+  #live-time { font-size: 18px; color: var(--cyan); font-weight: bold; display: block; }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 
   .stat-card {
-    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
     padding: 14px 18px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
   .stat-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: var(--cyan); border-radius: 6px 0 0 6px;
   }
 
-  .stat-label { font-size: 10px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-  .stat-value { font-size: 24px; font-weight: bold; color: var(--cyan); text-shadow: var(--glow-cyan); }
-  .stat-value.positive { color: var(--green); text-shadow: var(--glow-green); }
-  .stat-value.negative { color: var(--red); text-shadow: var(--glow-red); }
-  .stat-value.neutral { color: var(--yellow); text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+  .stat-label { font-size: 10px; color: var(--text2); letter-spacing: 1px; margin-bottom: 6px; font-style: italic; }
+  .stat-value { font-size: 24px; font-weight: bold; color: var(--cyan); }
+  .stat-value.positive { color: var(--green); }
+  .stat-value.negative { color: var(--red); }
+  .stat-value.neutral { color: var(--yellow); }
 
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 
   .btn {
-    padding: 8px 20px; border: 1px solid var(--cyan); background: transparent;
-    color: var(--cyan); font-family: inherit; font-size: 12px; letter-spacing: 2px;
-    cursor: pointer; border-radius: 4px; transition: all 0.2s; text-transform: uppercase;
+    padding: 8px 20px; border: 1px solid var(--border); background: var(--bg2);
+    color: var(--text2); font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    cursor: pointer; border-radius: 4px; transition: all 0.2s;
   }
-  .btn:hover { background: rgba(0,212,255,0.15); box-shadow: var(--glow-cyan); }
-  .btn.primary { background: rgba(0,212,255,0.1); box-shadow: var(--glow-cyan); }
+  .btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--bg3); }
+  .btn.primary { border-color: var(--cyan); color: var(--cyan); background: rgba(94,125,106,0.08); }
 
   .filter-group { display: flex; gap: 6px; margin-left: auto; align-items: center; }
   .filter-btn {
@@ -110,7 +105,7 @@
     color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px;
     cursor: pointer; border-radius: 4px; transition: all 0.2s;
   }
-  .filter-btn.active, .filter-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,255,0.08); }
+  .filter-btn.active, .filter-btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(94,125,106,0.1); }
   #month-select {
     padding: 6px 10px; border: 1px solid var(--border); background: var(--bg2);
     color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px;
@@ -121,18 +116,18 @@
   #month-select:focus { border-color: var(--cyan); outline: none; }
 
   .desktop-only { display: inline-flex; }
-  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
   table { width: 100%; border-collapse: collapse; }
 
   thead th {
-    background: var(--bg3); padding: 12px 14px; font-size: 10px; letter-spacing: 2px;
-    color: var(--text2); text-transform: uppercase; text-align: left;
+    background: var(--bg3); padding: 12px 14px; font-size: 10px; letter-spacing: 1px;
+    color: var(--text2); text-align: left; font-style: italic; font-weight: normal;
     border-bottom: 1px solid var(--border); white-space: nowrap;
   }
   thead th:first-child { padding-left: 20px; }
 
-  tbody tr { border-bottom: 1px solid rgba(26,58,92,0.4); transition: background 0.15s; }
-  tbody tr:hover { background: rgba(0,212,255,0.04); }
+  tbody tr { border-bottom: 1px solid rgba(201,189,166,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(94,125,106,0.05); }
   tbody tr:last-child { border-bottom: none; }
 
   td { padding: 13px 14px; font-size: 13px; vertical-align: middle; }
@@ -149,25 +144,25 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
 
-  .coin-badge { font-weight: bold; font-size: 14px; color: var(--cyan); text-shadow: var(--glow-cyan); min-width: 55px; }
+  .coin-badge { font-weight: bold; font-size: 14px; color: var(--cyan); min-width: 55px; }
 
   .direction-badge {
     display: inline-block; padding: 3px 10px; border-radius: 3px;
     font-size: 11px; font-weight: bold; letter-spacing: 1px;
   }
-  .direction-badge.long { background: rgba(0,255,136,0.12); border: 1px solid var(--long); color: var(--long); text-shadow: var(--glow-green); }
-  .direction-badge.short { background: rgba(255,51,102,0.12); border: 1px solid var(--short); color: var(--short); text-shadow: var(--glow-red); }
+  .direction-badge.long { background: rgba(74,112,89,0.1); border: 1px solid var(--long); color: var(--long); }
+  .direction-badge.short { background: rgba(139,61,61,0.1); border: 1px solid var(--short); color: var(--short); }
 
   .rr-badge { font-weight: bold; color: var(--yellow); }
 
   .status-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; letter-spacing: 1px; }
-  .status-badge.active { background: rgba(0,212,255,0.1); border: 1px solid var(--cyan); color: var(--cyan); }
-  .status-badge.win { background: rgba(0,255,136,0.1); border: 1px solid var(--green); color: var(--green); }
-  .status-badge.loss { background: rgba(255,51,102,0.1); border: 1px solid var(--red); color: var(--red); }
-  .status-badge.closed { background: rgba(106,154,176,0.1); border: 1px solid var(--text2); color: var(--text2); }
+  .status-badge.active { background: rgba(94,125,106,0.1); border: 1px solid var(--cyan); color: var(--cyan); }
+  .status-badge.win { background: rgba(74,112,89,0.1); border: 1px solid var(--green); color: var(--green); }
+  .status-badge.loss { background: rgba(139,61,61,0.1); border: 1px solid var(--red); color: var(--red); }
+  .status-badge.closed { background: rgba(122,109,92,0.1); border: 1px solid var(--text2); color: var(--text2); }
 
-  .pnl-positive { color: var(--green); font-weight: bold; text-shadow: var(--glow-green); }
-  .pnl-negative { color: var(--red); font-weight: bold; text-shadow: var(--glow-red); }
+  .pnl-positive { color: var(--green); font-weight: bold; }
+  .pnl-negative { color: var(--red); font-weight: bold; }
   .pnl-null { color: var(--text2); }
 
   .action-btns { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
@@ -180,32 +175,32 @@
   .action-btn:hover { border-color: var(--cyan); color: var(--cyan); }
   .action-btn.del:hover { border-color: var(--red); color: var(--red); }
   .action-btn.tp { border-color: var(--green); color: var(--green); }
-  .action-btn.tp:hover { background: rgba(0,255,136,0.15); box-shadow: var(--glow-green); }
+  .action-btn.tp:hover { background: rgba(74,112,89,0.12); }
   .action-btn.sl { border-color: var(--red); color: var(--red); }
-  .action-btn.sl:hover { background: rgba(255,51,102,0.15); box-shadow: var(--glow-red); }
+  .action-btn.sl:hover { background: rgba(139,61,61,0.12); }
   .action-btn.close { border-color: var(--yellow); color: var(--yellow); }
-  .action-btn.close:hover { background: rgba(255,215,0,0.15); box-shadow: 0 0 8px rgba(255,215,0,0.6); }
+  .action-btn.close:hover { background: rgba(166,124,42,0.12); }
 
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text2); font-size: 13px; letter-spacing: 2px; }
 
   .modal-overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(5,10,14,0.85); z-index: 100;
-    backdrop-filter: blur(4px); align-items: center; justify-content: center;
+    background: rgba(42,31,20,0.4); z-index: 100;
+    backdrop-filter: blur(3px); align-items: center; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
 
   .modal {
-    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
     padding: 30px; width: 100%; max-width: 560px; max-height: 90vh;
-    overflow-y: auto; position: relative; box-shadow: 0 0 60px rgba(0,212,255,0.15);
+    overflow-y: auto; position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.12);
   }
   .modal::before {
-    content: ''; position: absolute; top: 0; left: 20px; right: 20px; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--cyan); border-radius: 10px 10px 0 0;
   }
 
-  .modal-title { font-size: 16px; letter-spacing: 3px; color: var(--cyan); text-shadow: var(--glow-cyan); text-transform: uppercase; margin-bottom: 24px; }
+  .modal-title { font-size: 15px; letter-spacing: 2px; color: var(--cyan); font-style: italic; margin-bottom: 24px; }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -218,7 +213,7 @@
     font-family: inherit; font-size: 13px; padding: 9px 12px; border-radius: 4px;
     transition: border-color 0.2s, box-shadow 0.2s; outline: none;
   }
-  input:focus, select:focus, textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0,212,255,0.12); }
+  input:focus, select:focus, textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(94,125,106,0.15); }
   textarea { resize: vertical; min-height: 60px; }
   select option { background: var(--bg3); }
 
@@ -228,8 +223,8 @@
     font-family: inherit; font-size: 12px; letter-spacing: 2px; cursor: pointer;
     transition: all 0.2s; text-transform: uppercase;
   }
-  .dir-btn.long.active { background: rgba(0,255,136,0.15); color: var(--green); text-shadow: var(--glow-green); }
-  .dir-btn.short.active { background: rgba(255,51,102,0.15); color: var(--red); text-shadow: var(--glow-red); }
+  .dir-btn.long.active { background: rgba(74,112,89,0.15); color: var(--green); }
+  .dir-btn.short.active { background: rgba(139,61,61,0.15); color: var(--red); }
 
   .rr-preview { font-size: 11px; color: var(--text2); margin-top: 2px; }
   .rr-preview span { color: var(--yellow); font-weight: bold; }
@@ -240,6 +235,8 @@
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
 
   .date-cell { color: var(--text2); font-size: 11px; }
   .price-cell { color: var(--text); font-size: 12px; text-align: center; }
@@ -278,15 +275,16 @@
     .trade-card {
       background: var(--bg2);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 14px 16px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
     .trade-card::before {
       content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+      background: var(--cyan);
     }
 
     .card-header {
@@ -322,9 +320,86 @@
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
   }
+
+  /* ── Auth Overlay ───────────────────────────────── */
+  #auth-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
+  }
+  #auth-overlay::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; opacity: 0.6;
+  }
+  .auth-box {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 40px; width: 360px; max-width: calc(100vw - 40px); position: relative; z-index: 1;
+  }
+  .auth-logo { text-align: center; margin-bottom: 28px; }
+  .auth-logo .auth-logo-icon {
+    width: 48px; height: 48px; border: 2px solid var(--cyan); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    box-shadow: var(--glow-cyan); margin: 0 auto 10px;
+  }
+  .auth-logo h2 { color: var(--cyan); letter-spacing: 4px; font-size: 18px; text-shadow: var(--glow-cyan); }
+  .auth-tabs { display: flex; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .auth-tab {
+    flex: 1; padding: 10px; text-align: center; cursor: pointer; color: var(--text2);
+    font-size: 13px; letter-spacing: 1px; transition: color 0.2s; font-family: inherit;
+    background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .auth-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-form input {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 14px; border-radius: 6px; font-family: inherit; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .auth-form input:focus { border-color: var(--cyan); }
+  .auth-form input::placeholder { color: var(--text2); }
+  .auth-error { color: var(--red); font-size: 12px; text-align: center; min-height: 16px; letter-spacing: 1px; }
+  .auth-submit {
+    background: var(--cyan); color: #fff; border: none; padding: 11px; border-radius: 6px;
+    font-family: inherit; font-size: 13px; font-weight: bold; letter-spacing: 3px;
+    cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+  }
+  .auth-submit:hover { opacity: 0.85; }
+  .logout-btn {
+    background: none; border: 1px solid var(--border); color: var(--text2); padding: 4px 12px;
+    border-radius: 4px; font-family: inherit; font-size: 11px; cursor: pointer; letter-spacing: 1px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
+
+<!-- Auth Overlay -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">₿</div>
+      <h2>CRYPTO LOG</h2>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">登入</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">註冊</button>
+    </div>
+    <div id="auth-login-form" class="auth-form">
+      <input type="text" id="login-username" placeholder="帳號" autocomplete="username">
+      <input type="password" id="login-password" placeholder="密碼" autocomplete="current-password">
+      <div class="auth-error" id="login-error"></div>
+      <button class="auth-submit" onclick="doLogin()">登 入</button>
+    </div>
+    <div id="auth-register-form" class="auth-form" style="display:none">
+      <input type="text" id="reg-username" placeholder="帳號（3 字元以上）" autocomplete="username">
+      <input type="text" id="reg-display" placeholder="顯示名稱（可選）">
+      <input type="password" id="reg-password" placeholder="密碼（6 字元以上）" autocomplete="new-password">
+      <div class="auth-error" id="register-error"></div>
+      <button class="auth-submit" onclick="doRegister()">註 冊</button>
+    </div>
+  </div>
+</div>
 
 <div class="container">
   <header>
@@ -332,12 +407,15 @@
       <div class="logo-icon">₿</div>
       <div>
         <h1>CRYPTO LOG</h1>
-        <span>wei的交易紀錄</span>
+        <span id="header-username">交易紀錄</span>
       </div>
     </div>
-    <div class="header-time">
-      <span id="live-time">--:--:--</span>
-      <span id="live-date" style="font-size:11px;color:var(--text2)"></span>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+      <div class="header-time">
+        <span id="live-time">--:--:--</span>
+        <span id="live-date" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
     </div>
   </header>
 
@@ -392,6 +470,7 @@
     <button class="btn" onclick="loadTrades()" style="letter-spacing:1px">⟳ 重新整理</button>
 <button class="btn primary" onclick="openModal()">+ 新增交易</button>
 <button class="btn" id="sync-btn" onclick="syncBingX()" style="border-color:var(--yellow);color:var(--yellow)">⇄ 同步 BingX 持倉</button>
+<button class="btn" onclick="openSettings()" style="border-color:var(--cyan);color:var(--cyan)">⚙ BingX 設定</button>
     <div class="filter-group">
       <select id="month-select" onchange="setMonth(this.value)">
         <option value="ALL">全部月份</option>
@@ -439,6 +518,33 @@
 <!-- Image Lightbox -->
 <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;align-items:center;justify-content:center;" onclick="closeLightbox()">
   <img id="lightbox-img" style="max-width:95vw;max-height:95vh;border-radius:6px;object-fit:contain">
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">BingX API 設定</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.8">
+      前往 BingX → 帳戶設定 → API 管理，建立 API Key 並開啟<strong style="color:var(--text)">合約交易讀取</strong>權限。<br>
+      你的 Key 只儲存在伺服器上，不會洩露給其他人。
+    </p>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="text" id="s-api-key" placeholder="貼上你的 API Key" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Secret Key</label>
+        <input type="password" id="s-secret" placeholder="貼上你的 Secret Key" autocomplete="off">
+        <span style="font-size:11px;color:var(--text2)">輸入新值才會更新；留空表示不更改</span>
+      </div>
+    </div>
+    <div id="settings-status" style="font-size:12px;min-height:18px;margin-top:12px;color:var(--text2)"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSettings()">取消</button>
+      <button class="btn primary" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -537,6 +643,94 @@
 </div>
 
 <script>
+// ── Auth ──────────────────────────────────────────────────────────────────────
+let currentUser = null;
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/auth/me');
+    if (res.ok) {
+      currentUser = await res.json();
+      hideAuthOverlay();
+      return true;
+    }
+  } catch(_) {}
+  showAuthOverlay();
+  return false;
+}
+
+function showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  const name = currentUser.display_name || currentUser.username;
+  document.getElementById('header-username').textContent = name + ' 的交易紀錄';
+}
+
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tab-login').classList.toggle('active', isLogin);
+  document.getElementById('tab-register').classList.toggle('active', !isLogin);
+  document.getElementById('auth-login-form').style.display = isLogin ? '' : 'none';
+  document.getElementById('auth-register-form').style.display = isLogin ? 'none' : '';
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = '請填寫帳號和密碼'; return; }
+  const res = await fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || '登入失敗'; return; }
+  currentUser = data;
+  hideAuthOverlay();
+  loadTrades();
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-username').value.trim();
+  const display_name = document.getElementById('reg-display').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errEl = document.getElementById('register-error');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = '請填寫帳號和密碼'; return; }
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, display_name: display_name || username }),
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || '註冊失敗'; return; }
+  currentUser = data;
+  hideAuthOverlay();
+  loadTrades();
+}
+
+async function doLogout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  currentUser = null;
+  allTrades = [];
+  renderTable();
+  document.getElementById('header-username').textContent = '交易紀錄';
+  showAuthOverlay();
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('reg-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doRegister();
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 const COIN_COLORS = {
   BTC:'#F7931A', ETH:'#627EEA', SOL:'#9945FF', BNB:'#F3BA2F',
   XRP:'#00AAE4', ADA:'#0033AD', DOGE:'#C2A633', AVAX:'#E84142',
@@ -651,6 +845,7 @@ function calcRR() {
 async function loadTrades() {
   try {
     const res = await fetch('/api/trades');
+    if (res.status === 401) { showAuthOverlay(); return; }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     allTrades = await res.json();
     updateMonthSelect();
@@ -1195,6 +1390,53 @@ function showToast(msg, color) {
   }, 2500);
 }
 
+async function openSettings() {
+  document.getElementById('settings-status').textContent = '';
+  document.getElementById('s-api-key').value = '';
+  document.getElementById('s-secret').value = '';
+  const res = await fetch('/api/settings');
+  if (res.ok) {
+    const d = await res.json();
+    const status = document.getElementById('settings-status');
+    if (d.has_bingx) {
+      status.textContent = '目前已設定 API Key：' + d.masked_key;
+      status.style.color = 'var(--green)';
+    } else {
+      status.textContent = '尚未設定 BingX API Key';
+      status.style.color = 'var(--text2)';
+    }
+  }
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+async function saveSettings() {
+  const apiKey = document.getElementById('s-api-key').value.trim();
+  const secret = document.getElementById('s-secret').value.trim();
+  const body = {};
+  if (apiKey) body.bingx_api_key = apiKey;
+  if (secret) body.bingx_secret = secret;
+  if (!Object.keys(body).length) { closeSettings(); return; }
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) {
+    showToast('設定已儲存', 'var(--green)');
+    closeSettings();
+  } else {
+    showToast('儲存失敗', 'var(--red)');
+  }
+}
+
+document.getElementById('settings-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
 async function syncBingX(silent = false) {
   const btn = document.getElementById('sync-btn');
   if (!silent) { btn.textContent = '同步中...'; btn.disabled = true; }
@@ -1217,9 +1459,13 @@ async function syncBingX(silent = false) {
   }
 }
 
-loadTrades();
 initFeeRateDisplay();
-setInterval(() => syncBingX(true), 30000); // 每 30 秒靜默同步
+checkAuth().then(ok => {
+  if (ok) {
+    loadTrades();
+    setInterval(() => syncBingX(true), 30000); // 每 30 秒靜默同步
+  }
+});
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/static/sw.js');
