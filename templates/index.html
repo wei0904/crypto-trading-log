@@ -118,8 +118,6 @@
   .tab-page.active { display: block; animation: tabIn 0.22s ease; }
   @keyframes tabIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-  .stat-card { transition: opacity 0.4s ease, transform 0.4s ease; }
-  .stat-card.hidden-card { opacity: 0; transform: translateY(16px); }
   .tab-section-title { font-size: 13px; color: var(--text2); letter-spacing: 2px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 
   @media (max-width: 768px) {
@@ -997,7 +995,6 @@ async function loadTrades() {
     renderTable();
     loadStats();
     renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
-    animateStatCards();
   } catch (err) {
     document.getElementById('trade-tbody').innerHTML =
       `<tr><td colspan="13" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
@@ -1808,15 +1805,6 @@ function setConditionField(val) {
   }
 }
 
-// ── Stat card entrance animation ────────────────────────────
-function animateStatCards() {
-  const cards = document.querySelectorAll('.stat-card');
-  cards.forEach(c => c.classList.add('hidden-card'));
-  cards.forEach((c, i) => {
-    setTimeout(() => c.classList.remove('hidden-card'), i * 55);
-  });
-}
-
 // ── Tab Navigation ──────────────────────────────────────────
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
@@ -1826,7 +1814,6 @@ function switchTab(name, btn) {
   if (activeBtn) activeBtn.classList.add('active');
   if (name === 'dashboard') {
     renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
-    animateStatCards();
     loadStats();
   } else if (name === 'settings') {
     loadSettingsData();
