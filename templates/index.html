@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交易紀錄">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #1d2226;
@@ -81,6 +82,22 @@
   .stat-value.positive { color: var(--green); }
   .stat-value.negative { color: var(--red); }
   .stat-value.neutral { color: var(--yellow); }
+
+  /* Chart */
+  .chart-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .chart-title { font-size: 13px; color: var(--text2); letter-spacing: 1px; }
+  .chart-toggle { display: flex; gap: 6px; }
+  .chart-btn { padding: 4px 14px; border: 1px solid var(--border); background: transparent; color: var(--text2); border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .chart-btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(130,175,192,0.08); }
+
+  /* Multi-select */
+  .bulk-bar { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 20px; display: none; align-items: center; gap: 14px; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap; }
+  .bulk-bar.show { display: flex; }
+  .bulk-count { font-size: 13px; color: var(--text2); }
+  input[type=checkbox].trade-check { width: 15px; height: 15px; accent-color: var(--cyan); cursor: pointer; }
+  tr.selected-row { background: rgba(130,175,192,0.06); }
+  .trade-card.selected-card { border-color: var(--cyan); }
 
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 
@@ -473,6 +490,18 @@
     </div>
   </div>
 
+  <!-- Chart -->
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">損益走勢（累計淨損益）</span>
+      <div class="chart-toggle">
+        <button class="chart-btn active" id="chart-week-btn" onclick="renderChart('week', this)">本週</button>
+        <button class="chart-btn" id="chart-month-btn" onclick="renderChart('month', this)">本月</button>
+      </div>
+    </div>
+    <canvas id="pnl-chart" height="100"></canvas>
+  </div>
+
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn" onclick="loadTrades()" style="letter-spacing:1px">⟳ 重新整理</button>
@@ -500,6 +529,7 @@
     <table>
       <thead>
         <tr>
+          <th style="width:30px;text-align:center"><input type="checkbox" class="trade-check" id="select-all" onchange="toggleSelectAll(this)"></th>
           <th>日期 / 時間</th>
           <th style="text-align:center">幣種</th>
           <th style="text-align:center">方向</th>
@@ -515,10 +545,17 @@
         </tr>
       </thead>
       <tbody id="trade-tbody">
-        <tr><td colspan="12" class="empty-state">[ 載入中... ]</td></tr>
+        <tr><td colspan="13" class="empty-state">[ 載入中... ]</td></tr>
       </tbody>
     </table>
   </div>
+</div>
+
+<!-- Bulk Action Bar -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-count" id="bulk-count">已選 0 筆</span>
+  <button class="btn" onclick="clearSelection()" style="padding:6px 14px;font-size:12px">取消</button>
+  <button class="btn" onclick="bulkDelete()" style="padding:6px 14px;font-size:12px;border-color:var(--red);color:var(--red)">刪除選取</button>
 </div>
 
 <!-- Toast -->
@@ -887,9 +924,10 @@ async function loadTrades() {
     updateMonthSelect();
     renderTable();
     loadStats();
+    renderChart('week', document.getElementById('chart-week-btn'));
   } catch (err) {
     document.getElementById('trade-tbody').innerHTML =
-      `<tr><td colspan="12" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
+      `<tr><td colspan="13" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
     document.getElementById('trade-cards').innerHTML =
       `<div style="text-align:center;padding:40px;color:var(--red);letter-spacing:2px;font-size:13px">[ 無法連線到伺服器：${err.message} ]</div>`;
   }
@@ -1006,7 +1044,7 @@ function renderTable() {
   const cards = document.getElementById('trade-cards');
 
   if (!trades.length) {
-    tbody.innerHTML = `<tr><td colspan="12" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">[ 暫無交易紀錄 ]</td></tr>`;
     cards.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2);letter-spacing:2px;font-size:13px">[ 暫無交易紀錄 ]</div>`;
     return;
   }
@@ -1026,9 +1064,10 @@ function renderTable() {
       <button class="action-btn tp" onclick="quickClose(${t.id}, '止盈')">止盈</button>
       <button class="action-btn sl" onclick="quickClose(${t.id}, '止損')">止損</button>
       <button class="action-btn close" onclick="quickManual(${t.id})">平倉</button>` : '';
-    return `<div class="trade-card">
+    return `<div class="trade-card" id="card-${t.id}">
       <div class="card-header">
         <div class="card-coin">
+          <input type="checkbox" class="trade-check" style="margin-right:6px" onchange="toggleSelect(${t.id}, this)">
           ${coinBadge(t.coin)}
           <span class="coin-badge">${t.coin}</span>
           <span class="direction-badge ${dirClass}">${dirLabel}</span>
@@ -1088,7 +1127,8 @@ function renderTable() {
 
     const rr = t.rr_ratio ? `<span class="rr-badge">${t.rr_ratio}R</span>` : '-';
 
-    return `<tr>
+    return `<tr id="row-${t.id}">
+      <td style="text-align:center"><input type="checkbox" class="trade-check" onchange="toggleSelect(${t.id}, this)"></td>
       <td class="date-cell">${t.date}${t.trade_time ? '<br><span style="color:var(--cyan);font-size:11px">' + t.trade_time + '</span>' : ''}</td>
       <td style="text-align:center"><div class="coin-cell" style="justify-content:center">
         ${coinBadge(t.coin)}
@@ -1603,6 +1643,121 @@ checkAuth().then(ok => {
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/static/sw.js');
+}
+
+// ── Multi-select ────────────────────────────────────────────
+let selectedIds = new Set();
+
+function toggleSelect(id, cb) {
+  if (cb.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  // sync the other view's checkbox (card ↔ row)
+  document.querySelectorAll(`input[onchange="toggleSelect(${id}, this)"]`).forEach(el => el.checked = cb.checked);
+  const row = document.getElementById('row-' + id);
+  const card = document.getElementById('card-' + id);
+  if (row) row.classList.toggle('selected-row', cb.checked);
+  if (card) card.classList.toggle('selected-card', cb.checked);
+  updateBulkBar();
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('input.trade-check:not(#select-all)').forEach(el => {
+    const match = el.getAttribute('onchange').match(/\d+/);
+    if (match) toggleSelect(parseInt(match[0]), Object.assign(el, {checked: cb.checked}));
+  });
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = `已選 ${selectedIds.size} 筆`;
+  bar.classList.toggle('show', selectedIds.size > 0);
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  document.querySelectorAll('input.trade-check').forEach(el => el.checked = false);
+  document.querySelectorAll('.selected-row').forEach(el => el.classList.remove('selected-row'));
+  document.querySelectorAll('.selected-card').forEach(el => el.classList.remove('selected-card'));
+  updateBulkBar();
+}
+
+async function bulkDelete() {
+  if (!selectedIds.size) return;
+  if (!confirm(`確定要刪除 ${selectedIds.size} 筆交易紀錄？`)) return;
+  const ids = [...selectedIds];
+  await Promise.all(ids.map(id => fetch(`/api/trades/${id}`, {method:'DELETE'})));
+  clearSelection();
+  loadTrades();
+  showToast(`已刪除 ${ids.length} 筆`, 'var(--red)');
+}
+
+// ── P&L Chart ───────────────────────────────────────────────
+let pnlChart = null;
+
+function renderChart(period, btn) {
+  document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const today = new Date();
+  let dates = [];
+  if (period === 'week') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+  } else {
+    const year = today.getFullYear(), month = today.getMonth();
+    const days = today.getDate();
+    for (let i = 1; i <= days; i++) {
+      const d = new Date(year, month, i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+  }
+
+  // Sum net P&L per date from closed trades
+  const dailyPnl = {};
+  dates.forEach(d => dailyPnl[d] = 0);
+  allTrades.forEach(t => {
+    if (!['止盈','止損','已平倉'].includes(t.status)) return;
+    if (!dailyPnl.hasOwnProperty(t.date)) return;
+    const net = (t.pnl || 0) - (t.fee || 0);
+    dailyPnl[t.date] = (dailyPnl[t.date] || 0) + net;
+  });
+
+  // Cumulative sum
+  let cum = 0;
+  const cumData = dates.map(d => { cum += dailyPnl[d]; return Math.round(cum * 100) / 100; });
+  const labels = dates.map(d => d.slice(5)); // MM-DD
+
+  const color = cum >= 0 ? '#6a9e82' : '#b07878';
+  const ctx = document.getElementById('pnl-chart').getContext('2d');
+  if (pnlChart) pnlChart.destroy();
+  pnlChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: cumData,
+        borderColor: color,
+        backgroundColor: color + '22',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: color,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y + ' U' }
+      }},
+      scales: {
+        x: { ticks: { color: '#7a8e9a', font: { size: 11 } }, grid: { color: '#2c363d' } },
+        y: { ticks: { color: '#7a8e9a', font: { size: 11 }, callback: v => v + 'U' }, grid: { color: '#2c363d' } }
+      }
+    }
+  });
 }
 </script>
 </body>
