@@ -479,6 +479,7 @@
 <button class="btn primary" onclick="openModal()">+ 新增交易</button>
 <button class="btn" id="sync-btn" onclick="syncBingX()" style="border-color:var(--yellow);color:var(--yellow)">⇄ 同步 BingX 持倉</button>
 <button class="btn" onclick="openSettings()" style="border-color:var(--cyan);color:var(--cyan)">⚙ BingX 設定</button>
+<button class="btn" id="ai-btn" onclick="openAiAnalysis()" style="border-color:#9b8fc0;color:#9b8fc0">&#10024; AI 分析</button>
     <div class="filter-group">
       <select id="month-select" onchange="setMonth(this.value)">
         <option value="ALL">全部月份</option>
@@ -559,6 +560,25 @@
     <div class="modal-footer">
       <button class="btn" onclick="closeSettings()">取消</button>
       <button class="btn primary" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Analysis Modal -->
+<div class="modal-overlay" id="ai-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title" style="color:#9b8fc0">&#10024; AI 交易心理分析</div>
+    <div id="ai-content" style="min-height:120px;font-size:13px;line-height:1.9;color:var(--text)">
+      <div id="ai-loading" style="display:none;text-align:center;padding:40px 0;color:var(--text2)">
+        分析中，請稍候...
+      </div>
+      <div id="ai-result" style="white-space:pre-wrap"></div>
+      <div id="ai-error" style="color:var(--red)"></div>
+    </div>
+    <div id="ai-meta" style="font-size:11px;color:var(--text2);margin-top:12px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeAiAnalysis()">關閉</button>
+      <button class="btn primary" id="ai-run-btn" onclick="runAiAnalysis()">開始分析</button>
     </div>
   </div>
 </div>
@@ -1505,6 +1525,50 @@ async function loadBalance() {
 document.getElementById('settings-modal').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
 });
+
+document.getElementById('ai-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAiAnalysis();
+});
+
+function openAiAnalysis() {
+  document.getElementById('ai-result').textContent = '';
+  document.getElementById('ai-error').textContent = '';
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-meta').textContent = '';
+  document.getElementById('ai-run-btn').disabled = false;
+  document.getElementById('ai-run-btn').textContent = '開始分析';
+  document.getElementById('ai-modal').classList.add('open');
+}
+
+function closeAiAnalysis() {
+  document.getElementById('ai-modal').classList.remove('open');
+}
+
+async function runAiAnalysis() {
+  const btn = document.getElementById('ai-run-btn');
+  btn.disabled = true;
+  btn.textContent = '分析中...';
+  document.getElementById('ai-result').textContent = '';
+  document.getElementById('ai-error').textContent = '';
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-meta').textContent = '';
+  try {
+    const res = await fetch('/api/ai-analyze', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('ai-loading').style.display = 'none';
+    if (data.error) {
+      document.getElementById('ai-error').textContent = data.error;
+    } else {
+      document.getElementById('ai-result').textContent = data.analysis;
+      document.getElementById('ai-meta').textContent = `已分析最近 ${data.trade_count} 筆平倉交易`;
+    }
+  } catch(e) {
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-error').textContent = '連線失敗：' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '重新分析';
+}
 
 async function syncBingX(silent = false) {
   const btn = document.getElementById('sync-btn');

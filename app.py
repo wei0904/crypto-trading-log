@@ -453,6 +453,65 @@ def get_stats():
     })
 
 
+@app.route('/api/ai-analyze', methods=['POST'])
+@login_required
+def ai_analyze():
+    api_key = os.environ.get('GEMINI_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': '尚未設定 GEMINI_API_KEY，請聯絡管理員'}), 400
+
+    trades = (Trade.query
+              .filter_by(trader=session['username'])
+              .filter(Trade.status.in_(['止盈', '止損', '已平倉']))
+              .order_by(Trade.date.desc(), Trade.id.desc())
+              .limit(30).all())
+
+    if len(trades) < 3:
+        return jsonify({'error': '需要至少 3 筆已平倉交易才能進行分析'}), 400
+
+    lines = []
+    for i, t in enumerate(reversed(trades), 1):
+        pnl_str = f"{t.pnl:+.2f}" if t.pnl is not None else '未知'
+        rr_str = f"{t.rr_ratio:.2f}" if t.rr_ratio else '未知'
+        lines.append(
+            f"{i}. [{t.date} {t.trade_time or ''}] {t.coin} {t.direction} "
+            f"結果:{t.status} 損益:{pnl_str}U 風報比:{rr_str} "
+            f"進場條件:{t.condition or '無'} 備註:{t.notes or '無'}"
+        )
+
+    trade_text = '\n'.join(lines)
+    prompt = f"""你是一位專業的加密貨幣交易心理教練，請根據以下 {len(trades)} 筆交易紀錄進行深入分析。
+
+交易紀錄（由舊到新）：
+{trade_text}
+
+請從以下幾個面向進行分析，並用繁體中文回答：
+
+1. **整體交易模式判斷**：這些交易整體偏向「策略交易」、「情緒交易」還是「FOMO追漲」？給出百分比估算。
+
+2. **情緒交易特徵**：有哪些交易可能是情緒驅動的？請列出具體例子（用交易編號）。
+
+3. **FOMO 跡象**：有沒有看起來像是看到行情動了才追進的交易？
+
+4. **策略一致性**：進場條件是否一致？有沒有規律可循？
+
+5. **優點與需要改進之處**：各列出 2-3 點。
+
+6. **給交易者的具體建議**：3 條實用的改善建議。
+
+請保持客觀、直接，不要過度安慰。如果有問題就直說。"""
+
+    try:
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}'
+        body = {'contents': [{'parts': [{'text': prompt}]}]}
+        resp = rq.post(url, json=body, timeout=30)
+        resp.raise_for_status()
+        result = resp.json()['candidates'][0]['content']['parts'][0]['text']
+        return jsonify({'analysis': result, 'trade_count': len(trades)})
+    except Exception as e:
+        return jsonify({'error': f'AI 分析失敗：{str(e)}'}), 500
+
+
 def migrate_table(conn, table_name, model_cols, is_pg):
     if is_pg:
         existing = {row[0] for row in conn.execute(
