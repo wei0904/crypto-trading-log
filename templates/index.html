@@ -452,6 +452,10 @@
       <div class="stat-label">淨損益</div>
       <div class="stat-value" id="stat-netpnl">-</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">今日淨損益</div>
+      <div class="stat-value" id="stat-today">-</div>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -888,6 +892,15 @@ function loadStats() {
   const netpnl = document.getElementById('stat-netpnl');
   netpnl.textContent = (net_pnl >= 0 ? '+' : '') + net_pnl + ' U';
   netpnl.className = 'stat-value ' + (net_pnl > 0 ? 'positive' : net_pnl < 0 ? 'negative' : '');
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayTrades = allTrades.filter(t => t.date === today && ['止盈','止損','已平倉'].includes(t.status));
+  const today_pnl = Math.round(todayTrades.reduce((s,t) => s + (t.pnl||0), 0) * 100) / 100;
+  const today_fee = Math.round(todayTrades.reduce((s,t) => s + (t.fee||0), 0) * 100) / 100;
+  const today_net = Math.round((today_pnl - today_fee) * 100) / 100;
+  const todayEl = document.getElementById('stat-today');
+  todayEl.textContent = todayTrades.length ? (today_net >= 0 ? '+' : '') + today_net + ' U' : '-';
+  todayEl.className = 'stat-value ' + (today_net > 0 ? 'positive' : today_net < 0 ? 'negative' : '');
 }
 
 
@@ -1213,10 +1226,16 @@ async function quickManual(id) {
   if (input === null) return;
   const pnl = parseFloat(input);
   if (isNaN(pnl)) { alert('請輸入有效數字'); return; }
+  const body = { status: '已平倉', pnl };
+  const t = allTrades.find(x => x.id === id);
+  if (t && t.risk_amount && t.entry_price && t.stop_loss) {
+    const posSize = t.risk_amount / Math.abs(t.entry_price - t.stop_loss);
+    body.fee = parseFloat((posSize * t.entry_price * feeRate * 2).toFixed(4));
+  }
   await fetch(`/api/trades/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: '已平倉', pnl }),
+    body: JSON.stringify(body),
   });
   loadTrades();
 }
@@ -1227,6 +1246,10 @@ async function quickClose(id, status) {
   if (t && t.risk_amount && t.rr_ratio) {
     if (status === '止盈') body.pnl = parseFloat((t.risk_amount * t.rr_ratio).toFixed(2));
     if (status === '止損') body.pnl = parseFloat((-t.risk_amount).toFixed(2));
+  }
+  if (t && t.risk_amount && t.entry_price && t.stop_loss) {
+    const posSize = t.risk_amount / Math.abs(t.entry_price - t.stop_loss);
+    body.fee = parseFloat((posSize * t.entry_price * feeRate * 2).toFixed(4));
   }
   await fetch(`/api/trades/${id}`, {
     method: 'PUT',
