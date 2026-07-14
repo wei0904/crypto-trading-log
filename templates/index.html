@@ -889,7 +889,7 @@ function coinBadge(symbol) {
 
 let allTrades = [];
 let currentFilter = 'ALL';
-const _todayMonth = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
+const _todayMonth = twDateStr().slice(0, 7);
 let currentMonth = _todayMonth;
 let editId = null;
 let currentDir = 'LONG';
@@ -900,19 +900,24 @@ const tradeImageCache = {};
 let feeManuallyEdited = false;
 let isSubmitting = false;
 
+// Taiwan timezone helpers
+const TW_TZ = 'Asia/Taipei';
+function twNow() { return new Date(new Date().toLocaleString('en-US', { timeZone: TW_TZ })); }
+function twDateStr() { return new Date().toLocaleDateString('sv-SE', { timeZone: TW_TZ }); }
+
 // Live clock
 function updateClock() {
   const now = new Date();
   document.getElementById('live-time').textContent =
-    now.toLocaleTimeString('zh-TW', { hour12: false });
+    now.toLocaleTimeString('zh-TW', { hour12: false, timeZone: TW_TZ });
   document.getElementById('live-date').textContent =
-    now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+    now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', timeZone: TW_TZ });
 }
 setInterval(updateClock, 1000);
 updateClock();
 
-// Set today as default date
-document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+// Set today as default date (Taiwan time)
+document.getElementById('f-date').value = twDateStr();
 
 let feeRate = parseFloat(localStorage.getItem('feeRate') || '0.0005');
 function initFeeRateDisplay() {
@@ -1035,7 +1040,7 @@ function loadStats() {
   netpnl.textContent = (net_pnl >= 0 ? '+' : '') + net_pnl + ' U';
   netpnl.className = 'stat-value ' + (net_pnl > 0 ? 'positive' : net_pnl < 0 ? 'negative' : '');
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = twDateStr();
   const todayTrades = allTrades.filter(t => t.date === today && ['止盈','止損','已平倉'].includes(t.status));
   const today_pnl = Math.round(todayTrades.reduce((s,t) => s + (t.pnl||0), 0) * 100) / 100;
   const today_fee = Math.round(todayTrades.reduce((s,t) => s + (t.fee||0), 0) * 100) / 100;
@@ -1228,7 +1233,7 @@ function openModal() {
   editId = null;
   document.getElementById('modal-title').textContent = '新增交易紀錄';
   document.getElementById('f-coin').value = '';
-  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-date').value = twDateStr();
   document.getElementById('f-entry').value = '';
   document.getElementById('f-tp').value = '';
   document.getElementById('f-sl').value = '';
@@ -1796,7 +1801,8 @@ function renderChart(period, btn) {
   document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  const today = new Date();
+  const todayStr = twDateStr();
+  const today = new Date(todayStr);
   let dates = [];
   if (period === 'week') {
     for (let i = 6; i >= 0; i--) {
