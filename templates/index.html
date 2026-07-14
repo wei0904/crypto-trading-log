@@ -433,6 +433,9 @@
   </div>
 </div>
 
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 22px;border-radius:8px;font-size:13px;letter-spacing:1px;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:300;pointer-events:none;white-space:nowrap;"></div>
+
 <!-- Image Lightbox -->
 <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;align-items:center;justify-content:center;" onclick="closeLightbox()">
   <img id="lightbox-img" style="max-width:95vw;max-height:95vh;border-radius:6px;object-fit:contain">
@@ -1177,6 +1180,21 @@ document.getElementById('modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
+let toastTimer;
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || 'var(--border)';
+  t.style.color = color || 'var(--text)';
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2500);
+}
+
 async function syncBingX(silent = false) {
   const btn = document.getElementById('sync-btn');
   if (!silent) { btn.textContent = '同步中...'; btn.disabled = true; }
@@ -1184,15 +1202,15 @@ async function syncBingX(silent = false) {
     const res = await fetch('/api/sync-bingx', { method: 'POST' });
     const data = await res.json();
     if (data.error) {
-      if (!silent) alert('同步失敗：' + data.error);
-    } else {
-      if (data.added.length) {
-        loadTrades();
-        if (!silent) alert(`新增：${data.added.join(', ')}`);
-      }
+      showToast('同步失敗：' + data.error, 'var(--red)');
+    } else if (data.added.length) {
+      loadTrades();
+      showToast('新增持倉：' + data.added.join(', '), 'var(--green)');
+    } else if (!silent) {
+      showToast('無新持倉', 'var(--text2)');
     }
   } catch (e) {
-    if (!silent) alert('同步失敗：' + e.message);
+    showToast('同步失敗：' + e.message, 'var(--red)');
   } finally {
     if (!silent) { btn.textContent = '⇄ 同步 BingX 持倉'; btn.disabled = false; }
   }
