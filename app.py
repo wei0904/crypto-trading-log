@@ -8,6 +8,12 @@ import requests as rq
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+TZ = ZoneInfo('Asia/Taipei')
+
+def now_tw():
+    return datetime.now(TZ)
 
 BINGX_API_KEY = os.environ.get('BINGX_API_KEY', '')
 BINGX_SECRET = os.environ.get('BINGX_SECRET', '')
@@ -206,8 +212,8 @@ def sync_bingx():
                 take_profit=tp,
                 stop_loss=sl,
                 rr_ratio=calc_rr(entry, tp, sl, side) if tp and sl else None,
-                date=datetime.now().strftime('%Y-%m-%d'),
-                trade_time=datetime.now().strftime('%H:%M'),
+                date=now_tw().strftime('%Y-%m-%d'),
+                trade_time=now_tw().strftime('%H:%M'),
                 status='進行中',
             )
             db.session.add(trade)
