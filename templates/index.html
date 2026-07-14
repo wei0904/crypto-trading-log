@@ -1203,11 +1203,12 @@ async function syncBingX(silent = false) {
     const data = await res.json();
     if (data.error) {
       showToast('同步失敗：' + data.error, 'var(--red)');
-    } else if (data.added.length) {
-      loadTrades();
-      showToast('新增持倉：' + data.added.join(', '), 'var(--green)');
-    } else if (!silent) {
-      showToast('無新持倉', 'var(--text2)');
+    } else {
+      const hasUpdate = data.added.length || data.closed.length;
+      if (hasUpdate) loadTrades();
+      if (data.added.length) showToast('新增持倉：' + data.added.join(', '), 'var(--green)');
+      else if (data.closed.length) showToast('已平倉：' + data.closed.join(', '), 'var(--yellow)');
+      else if (!silent) showToast('無新持倉', 'var(--text2)');
     }
   } catch (e) {
     showToast('同步失敗：' + e.message, 'var(--red)');

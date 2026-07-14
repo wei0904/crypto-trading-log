@@ -189,7 +189,34 @@ def sync_bingx():
                 tpsl_map.setdefault(key, {})['sl'] = stop_price
 
         positions = pos_data.get('data', [])
-        added, skipped = [], []
+        # 建立目前 BingX 有倉位的 key 集合
+        active_keys = set()
+        for pos in positions:
+            if float(pos.get('positionAmt') or 0) != 0:
+                active_keys.add(f"{pos.get('symbol', '')}_{pos.get('positionSide', '')}")
+
+        added, skipped, auto_closed = [], [], []
+
+        # 檢查平倉：DB 進行中但 BingX 已無倉位
+        active_trades = Trade.query.filter_by(status='進行中').all()
+        for trade in active_trades:
+            symbol = f"{trade.coin}-USDT"
+            key = f"{symbol}_{trade.direction}"
+            if key in active_keys:
+                continue
+            # 抓實現盈虧
+            start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
+            pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50})
+            fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50})
+            pnl_list = pnl_resp.get('data', {}).get('incomes', []) if pnl_resp.get('code') == 0 else []
+            fee_list = fee_resp.get('data', {}).get('incomes', []) if fee_resp.get('code') == 0 else []
+            pnl = round(sum(float(i.get('income', 0)) for i in pnl_list), 4)
+            fee = round(abs(sum(float(i.get('income', 0)) for i in fee_list)), 4)
+            trade.pnl = pnl
+            trade.fee = fee
+            trade.status = '止盈' if pnl > 0 else '止損'
+            auto_closed.append(trade.coin)
+
         for pos in positions:
             size = float(pos.get('positionAmt') or 0)
             entry = float(pos.get('avgPrice') or 0)
@@ -230,7 +257,7 @@ def sync_bingx():
             db.session.add(trade)
             added.append(coin)
         db.session.commit()
-        return jsonify({'added': added, 'skipped': skipped})
+        return jsonify({'added': added, 'skipped': skipped, 'closed': auto_closed})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
