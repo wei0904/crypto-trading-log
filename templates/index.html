@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交易紀錄">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -35,7 +38,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
     background-image:
@@ -1012,33 +1015,35 @@ function loadStats() {
   const total_fees = Math.round(ts.reduce((s,t) => s + (t.fee||0), 0) * 100) / 100;
   const net_pnl = Math.round((total_pnl - total_fees) * 100) / 100;
 
-  document.getElementById('stat-total').textContent = ts.length;
-  document.getElementById('stat-active').textContent = ts.filter(t => t.status === '進行中').length;
-  document.getElementById('stat-wins').textContent = wins;
-  document.getElementById('stat-losses').textContent = losses;
-  document.getElementById('stat-manual').textContent = manual;
-  document.getElementById('stat-rr').textContent = avg_rr ? avg_rr + 'R' : '-';
+  countUp(document.getElementById('stat-total'), ts.length, fmtInt);
+  countUp(document.getElementById('stat-active'), ts.filter(t => t.status === '進行中').length, fmtInt);
+  countUp(document.getElementById('stat-wins'), wins, fmtInt);
+  countUp(document.getElementById('stat-losses'), losses, fmtInt);
+  countUp(document.getElementById('stat-manual'), manual, fmtInt);
+  if (avg_rr) countUp(document.getElementById('stat-rr'), avg_rr, fmtR);
+  else document.getElementById('stat-rr').textContent = '-';
 
   const wr = document.getElementById('stat-winrate');
-  wr.textContent = win_rate + '%';
   wr.className = 'stat-value ' + (win_rate >= 50 ? 'positive' : win_rate > 0 ? 'negative' : '');
+  countUp(wr, win_rate, fmtPct);
 
   const allClosed = allTrades.filter(t => ['止盈','止損','已平倉'].includes(t.status));
   const allWins = allTrades.filter(t => t.status === '止盈').length;
   const total_wr = allClosed.length ? Math.round(allWins / allClosed.length * 1000) / 10 : 0;
   const twr = document.getElementById('stat-total-winrate');
-  twr.textContent = total_wr + '%';
   twr.className = 'stat-value ' + (total_wr >= 50 ? 'positive' : total_wr > 0 ? 'negative' : '');
+  countUp(twr, total_wr, fmtPct);
 
   const pnl = document.getElementById('stat-pnl');
-  pnl.textContent = (total_pnl >= 0 ? '+' : '') + total_pnl + ' U';
   pnl.className = 'stat-value ' + (total_pnl > 0 ? 'positive' : total_pnl < 0 ? 'negative' : '');
+  countUp(pnl, total_pnl, fmtPnl);
 
-  document.getElementById('stat-fees').textContent = total_fees > 0 ? '-' + total_fees + ' U' : '-';
+  if (total_fees > 0) countUp(document.getElementById('stat-fees'), -total_fees, fmtPnl);
+  else document.getElementById('stat-fees').textContent = '-';
 
   const netpnl = document.getElementById('stat-netpnl');
-  netpnl.textContent = (net_pnl >= 0 ? '+' : '') + net_pnl + ' U';
   netpnl.className = 'stat-value ' + (net_pnl > 0 ? 'positive' : net_pnl < 0 ? 'negative' : '');
+  countUp(netpnl, net_pnl, fmtPnl);
 
   const today = twDateStr();
   const todayTrades = allTrades.filter(t => t.date === today && ['止盈','止損','已平倉'].includes(t.status));
@@ -1046,8 +1051,9 @@ function loadStats() {
   const today_fee = Math.round(todayTrades.reduce((s,t) => s + (t.fee||0), 0) * 100) / 100;
   const today_net = Math.round((today_pnl - today_fee) * 100) / 100;
   const todayEl = document.getElementById('stat-today');
-  todayEl.textContent = todayTrades.length ? (today_net >= 0 ? '+' : '') + today_net + ' U' : '-';
   todayEl.className = 'stat-value ' + (today_net > 0 ? 'positive' : today_net < 0 ? 'negative' : '');
+  if (todayTrades.length) countUp(todayEl, today_net, fmtPnl);
+  else todayEl.textContent = '-';
 }
 
 
@@ -1619,12 +1625,12 @@ async function loadBalance() {
   const eqEl = document.getElementById('stat-equity');
   const roiEl = document.getElementById('stat-roi');
   if (d.equity != null) {
-    eqEl.textContent = d.equity.toFixed(2) + ' U';
+    countUp(eqEl, d.equity, fmtU);
   }
   if (d.equity != null && d.initial_capital) {
-    const roi = ((d.equity - d.initial_capital) / d.initial_capital * 100).toFixed(2);
-    roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
+    const roi = parseFloat(((d.equity - d.initial_capital) / d.initial_capital * 100).toFixed(2));
     roiEl.className = 'stat-value ' + (roi > 0 ? 'positive' : roi < 0 ? 'negative' : '');
+    countUp(roiEl, roi, v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%');
   }
 }
 
@@ -1737,6 +1743,27 @@ async function bulkDelete() {
   loadTrades();
   showToast(`已刪除 ${ids.length} 筆`, 'var(--red)');
 }
+
+// ── Count-up animation ──────────────────────────────────────
+function countUp(el, target, fmt, duration = 850) {
+  if (isNaN(target) || target === null) { el.textContent = fmt(target); return; }
+  const start = performance.now();
+  const sign = target < 0 ? -1 : 1;
+  const abs = Math.abs(target);
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+    el.textContent = fmt(sign * abs * ease);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = fmt(target);
+  }
+  requestAnimationFrame(tick);
+}
+const fmtInt  = v => Math.round(v);
+const fmtPct  = v => v.toFixed(1) + '%';
+const fmtPnl  = v => (v >= 0 ? '+' : '') + v.toFixed(2) + ' U';
+const fmtU    = v => v.toFixed(2) + ' U';
+const fmtR    = v => v.toFixed(2) + 'R';
 
 // ── Condition field helpers ──────────────────────────────────
 const PRESET_CONDITIONS = ['馬刺指標', '3+1 指標'];
