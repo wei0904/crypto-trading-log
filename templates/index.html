@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRYPTO TRADING LOG</title>
 <link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#1d2226">
+<meta name="theme-color" content="#13181b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="交易紀錄">
@@ -13,21 +13,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #1d2226;
-    --bg2: #242c32;
-    --bg3: #2c363d;
-    --border: #3a4850;
-    --cyan: #82afc0;
-    --green: #6a9e82;
-    --red: #b07878;
-    --yellow: #bfa05a;
-    --text: #ccd9e0;
-    --text2: #7a8e9a;
-    --long: #6a9e82;
-    --short: #b07878;
-    --glow-cyan: 0 1px 4px rgba(130,175,192,0.2);
-    --glow-green: 0 1px 4px rgba(106,158,130,0.2);
-    --glow-red: 0 1px 4px rgba(176,120,120,0.2);
+    --bg: #13181b;
+    --bg2: #1a2228;
+    --bg3: #202c34;
+    --border: #263540;
+    --cyan: #00d4e8;
+    --green: #00c896;
+    --red: #e05c6a;
+    --yellow: #f0b840;
+    --text: #c8dce6;
+    --text2: #4a6878;
+    --long: #00c896;
+    --short: #e05c6a;
+    --glow-cyan: 0 0 14px rgba(0,212,232,0.35);
+    --glow-green: 0 0 14px rgba(0,200,150,0.35);
+    --glow-red: 0 0 14px rgba(224,92,106,0.3);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,6 +38,10 @@
     font-family: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    background-image:
+      linear-gradient(rgba(0,212,232,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,232,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
   }
 
   body::before { display: none; }
@@ -54,34 +58,36 @@
   .logo-icon {
     width: 40px; height: 40px; border: 1.5px solid var(--cyan); border-radius: 6px;
     display: flex; align-items: center; justify-content: center; font-size: 20px;
-    box-shadow: 0 1px 4px rgba(94,125,106,0.15);
+    box-shadow: var(--glow-cyan), inset 0 0 10px rgba(0,212,232,0.06);
     background: var(--bg2);
   }
 
-  .logo h1 { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); }
+  .logo h1 { font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); text-shadow: 0 0 20px rgba(0,212,232,0.5); }
   .logo span { font-size: 11px; color: var(--text2); letter-spacing: 1px; display: block; font-style: italic; }
 
   .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
   .header-time { text-align: right; font-size: 12px; color: var(--text2); letter-spacing: 1px; }
-  #live-time { font-size: 18px; color: var(--cyan); font-weight: bold; display: block; }
+  #live-time { font-size: 18px; color: var(--cyan); font-weight: bold; display: block; font-family: 'Courier New', monospace; text-shadow: 0 0 12px rgba(0,212,232,0.6); letter-spacing: 2px; }
 
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
 
   .stat-card {
     background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
     padding: 14px 18px; position: relative; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
+  .stat-card:hover { border-color: rgba(0,212,232,0.3); box-shadow: 0 0 16px rgba(0,212,232,0.08); }
   .stat-card::before {
-    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
-    background: var(--cyan); border-radius: 6px 0 0 6px;
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 2px;
+    background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
   }
 
-  .stat-label { font-size: 10px; color: var(--text2); letter-spacing: 1px; margin-bottom: 6px; font-style: italic; }
-  .stat-value { font-size: 24px; font-weight: bold; color: var(--cyan); }
-  .stat-value.positive { color: var(--green); }
-  .stat-value.negative { color: var(--red); }
-  .stat-value.neutral { color: var(--yellow); }
+  .stat-label { font-size: 10px; color: var(--text2); letter-spacing: 2px; margin-bottom: 6px; text-transform: uppercase; }
+  .stat-value { font-size: 22px; font-weight: bold; color: var(--cyan); font-family: 'Courier New', monospace; text-shadow: 0 0 10px rgba(0,212,232,0.4); }
+  .stat-value.positive { color: var(--green); text-shadow: 0 0 10px rgba(0,200,150,0.4); }
+  .stat-value.negative { color: var(--red); text-shadow: 0 0 10px rgba(224,92,106,0.4); }
+  .stat-value.neutral { color: var(--yellow); text-shadow: 0 0 10px rgba(240,184,64,0.4); }
 
   /* Chart */
   .chart-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
@@ -103,7 +109,7 @@
   .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
   .tab-item { flex: 1; padding: 10px 6px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.2s; }
   .tab-item:hover { color: var(--text); }
-  .tab-item.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .tab-item.active { color: var(--cyan); border-bottom-color: var(--cyan); text-shadow: 0 0 10px rgba(0,212,232,0.6); }
   .tab-icon { font-size: 16px; line-height: 1; }
   .tab-page { display: none; }
   .tab-page.active { display: block; }
@@ -124,8 +130,8 @@
     color: var(--text2); font-family: inherit; font-size: 12px; letter-spacing: 1px;
     cursor: pointer; border-radius: 4px; transition: all 0.2s;
   }
-  .btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--bg3); }
-  .btn.primary { border-color: var(--cyan); color: var(--cyan); background: rgba(94,125,106,0.08); }
+  .btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--bg3); box-shadow: 0 0 10px rgba(0,212,232,0.15); }
+  .btn.primary { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,232,0.06); box-shadow: 0 0 8px rgba(0,212,232,0.12); }
 
   .filter-group { display: flex; gap: 6px; margin-left: auto; align-items: center; }
   .filter-btn {
@@ -266,8 +272,8 @@
   ::-webkit-scrollbar-track { background: var(--bg2); }
   ::-webkit-scrollbar-thumb { background: var(--border); }
 
-  .date-cell { color: var(--text2); font-size: 11px; }
-  .price-cell { color: var(--text); font-size: 12px; text-align: center; }
+  .date-cell { color: var(--text2); font-size: 11px; font-family: 'Courier New', monospace; }
+  .price-cell { color: var(--text); font-size: 12px; text-align: center; font-family: 'Courier New', monospace; }
   .condition-cell { max-width: 200px; cursor: pointer; }
   .condition-cell .c-inner { color: var(--text2); font-size: 11px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .condition-cell.expanded .c-inner { -webkit-line-clamp: unset; color: var(--text); }
@@ -1819,7 +1825,7 @@ function renderChart(period, btn) {
   const cumData = dates.map(d => { cum += dailyPnl[d]; return Math.round(cum * 100) / 100; });
   const labels = dates.map(d => d.slice(5)); // MM-DD
 
-  const color = cum >= 0 ? '#6a9e82' : '#b07878';
+  const color = cum >= 0 ? '#00c896' : '#e05c6a';
   const ctx = document.getElementById('pnl-chart').getContext('2d');
   if (pnlChart) pnlChart.destroy();
   pnlChart = new Chart(ctx, {
@@ -1843,8 +1849,8 @@ function renderChart(period, btn) {
         callbacks: { label: ctx => (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y + ' U' }
       }},
       scales: {
-        x: { ticks: { color: '#7a8e9a', font: { size: 11 } }, grid: { color: '#2c363d' } },
-        y: { ticks: { color: '#7a8e9a', font: { size: 11 }, callback: v => v + 'U' }, grid: { color: '#2c363d' } }
+        x: { ticks: { color: '#4a6878', font: { size: 11, family: 'Courier New' } }, grid: { color: '#1a2830' } },
+        y: { ticks: { color: '#4a6878', font: { size: 11, family: 'Courier New' }, callback: v => v + 'U' }, grid: { color: '#1a2830' } }
       }
     }
   });
