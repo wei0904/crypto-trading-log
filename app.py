@@ -203,6 +203,12 @@ def sync_bingx():
             sl = tpsl_map.get(key, {}).get('sl', 0)
             existing = Trade.query.filter_by(coin=coin, direction=side, entry_price=entry, status='進行中').first()
             if existing:
+                if tp and existing.take_profit != tp:
+                    existing.take_profit = tp
+                    existing.rr_ratio = calc_rr(entry, tp, sl, side) if tp and sl else existing.rr_ratio
+                if sl and existing.stop_loss != sl:
+                    existing.stop_loss = sl
+                    existing.rr_ratio = calc_rr(entry, tp, sl, side) if tp and sl else existing.rr_ratio
                 skipped.append(coin)
                 continue
             update_ts = pos.get('updateTime')
