@@ -463,6 +463,14 @@
       <div class="stat-label">今日淨損益</div>
       <div class="stat-value" id="stat-today">-</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">當前資產</div>
+      <div class="stat-value neutral" id="stat-equity">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">總報酬率</div>
+      <div class="stat-value" id="stat-roi">-</div>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -537,6 +545,11 @@
         <label>Secret Key</label>
         <input type="password" id="s-secret" placeholder="貼上你的 Secret Key" autocomplete="off">
         <span style="font-size:11px;color:var(--text2)">輸入新值才會更新；留空表示不更改</span>
+      </div>
+      <div class="form-group">
+        <label>初始資產（USDT）</label>
+        <input type="number" id="s-capital" placeholder="例：1000" step="any" min="0">
+        <span style="font-size:11px;color:var(--text2)">用來計算總報酬率</span>
       </div>
     </div>
     <div id="settings-status" style="font-size:12px;min-height:18px;margin-top:12px;color:var(--text2)"></div>
@@ -1413,6 +1426,7 @@ async function openSettings() {
   document.getElementById('settings-status').textContent = '';
   document.getElementById('s-api-key').value = '';
   document.getElementById('s-secret').value = '';
+  document.getElementById('s-capital').value = '';
   const res = await fetch('/api/settings');
   if (res.ok) {
     const d = await res.json();
@@ -1424,6 +1438,7 @@ async function openSettings() {
       status.textContent = '尚未設定 BingX API Key';
       status.style.color = 'var(--text2)';
     }
+    if (d.initial_capital) document.getElementById('s-capital').value = d.initial_capital;
   }
   document.getElementById('settings-modal').classList.add('open');
 }
@@ -1435,9 +1450,11 @@ function closeSettings() {
 async function saveSettings() {
   const apiKey = document.getElementById('s-api-key').value.trim();
   const secret = document.getElementById('s-secret').value.trim();
+  const capital = document.getElementById('s-capital').value.trim();
   const body = {};
   if (apiKey) body.bingx_api_key = apiKey;
   if (secret) body.bingx_secret = secret;
+  if (capital !== '') body.initial_capital = parseFloat(capital) || null;
   if (!Object.keys(body).length) { closeSettings(); return; }
   const res = await fetch('/api/settings', {
     method: 'POST',
@@ -1447,8 +1464,25 @@ async function saveSettings() {
   if (res.ok) {
     showToast('設定已儲存', 'var(--green)');
     closeSettings();
+    loadBalance();
   } else {
     showToast('儲存失敗', 'var(--red)');
+  }
+}
+
+async function loadBalance() {
+  const res = await fetch('/api/balance');
+  if (!res.ok) return;
+  const d = await res.json();
+  const eqEl = document.getElementById('stat-equity');
+  const roiEl = document.getElementById('stat-roi');
+  if (d.equity != null) {
+    eqEl.textContent = d.equity.toFixed(2) + ' U';
+  }
+  if (d.equity != null && d.initial_capital) {
+    const roi = ((d.equity - d.initial_capital) / d.initial_capital * 100).toFixed(2);
+    roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
+    roiEl.className = 'stat-value ' + (roi > 0 ? 'positive' : roi < 0 ? 'negative' : '');
   }
 }
 
@@ -1482,6 +1516,7 @@ initFeeRateDisplay();
 checkAuth().then(ok => {
   if (ok) {
     loadTrades();
+    loadBalance();
     setInterval(() => syncBingX(true), 30000); // 每 30 秒靜默同步
   }
 });

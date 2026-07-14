@@ -42,6 +42,7 @@ class User(db.Model):
     display_name = db.Column(db.String(50))
     bingx_api_key = db.Column(db.String(200))
     bingx_secret = db.Column(db.String(200))
+    initial_capital = db.Column(db.Float)
     created_at = db.Column(db.String(30), default=lambda: datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
 
@@ -282,7 +283,11 @@ def get_settings():
     if has_key:
         k = user.bingx_api_key.strip()
         masked = k[:4] + '*' * (len(k) - 8) + k[-4:]
-    return jsonify({'has_bingx': has_key, 'masked_key': masked})
+    return jsonify({
+        'has_bingx': has_key,
+        'masked_key': masked,
+        'initial_capital': user.initial_capital if user else None,
+    })
 
 
 @app.route('/api/settings', methods=['POST'])
@@ -296,8 +301,29 @@ def save_settings():
         user.bingx_api_key = d['bingx_api_key'].strip() or None
     if 'bingx_secret' in d:
         user.bingx_secret = d['bingx_secret'].strip() or None
+    if 'initial_capital' in d:
+        v = d['initial_capital']
+        user.initial_capital = float(v) if v not in (None, '', 0) else None
     db.session.commit()
     return jsonify({'ok': True})
+
+
+@app.route('/api/balance', methods=['GET'])
+@login_required
+def get_balance():
+    user = User.query.filter_by(username=session['username']).first()
+    api_key, secret = get_user_bingx_keys()
+    result = {'initial_capital': user.initial_capital if user else None, 'equity': None, 'available': None}
+    if api_key and secret:
+        try:
+            data = bingx_get('/openApi/swap/v2/user/balance', api_key=api_key, secret=secret)
+            if data.get('code') == 0:
+                bal = data.get('data', {}).get('balance', {})
+                result['equity'] = float(bal.get('equity') or bal.get('balance') or 0)
+                result['available'] = float(bal.get('availableMargin') or bal.get('available') or 0)
+        except Exception:
+            pass
+    return jsonify(result)
 
 
 @app.route('/api/sync-bingx', methods=['POST'])
