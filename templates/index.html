@@ -892,6 +892,10 @@ function coinBadge(symbol) {
 
 let allTrades = [];
 let currentFilter = 'ALL';
+// Taiwan timezone helpers (defined early, used everywhere)
+const TW_TZ = 'Asia/Taipei';
+function twNow() { return new Date(new Date().toLocaleString('en-US', { timeZone: TW_TZ })); }
+function twDateStr() { return new Date().toLocaleDateString('sv-SE', { timeZone: TW_TZ }); }
 const _todayMonth = twDateStr().slice(0, 7);
 let currentMonth = _todayMonth;
 let editId = null;
@@ -902,11 +906,6 @@ let imgStore = { img1: null, img2: null };
 const tradeImageCache = {};
 let feeManuallyEdited = false;
 let isSubmitting = false;
-
-// Taiwan timezone helpers
-const TW_TZ = 'Asia/Taipei';
-function twNow() { return new Date(new Date().toLocaleString('en-US', { timeZone: TW_TZ })); }
-function twDateStr() { return new Date().toLocaleDateString('sv-SE', { timeZone: TW_TZ }); }
 
 // Live clock
 function updateClock() {
