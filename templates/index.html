@@ -99,6 +99,23 @@
   tr.selected-row { background: rgba(130,175,192,0.06); }
   .trade-card.selected-card { border-color: var(--cyan); }
 
+  /* Tab navigation */
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab-item { flex: 1; padding: 10px 6px; border: none; border-bottom: 2px solid transparent; background: transparent; color: var(--text2); font-family: inherit; font-size: 11px; letter-spacing: 1px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.2s; }
+  .tab-item:hover { color: var(--text); }
+  .tab-item.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .tab-icon { font-size: 16px; line-height: 1; }
+  .tab-page { display: none; }
+  .tab-page.active { display: block; }
+  .tab-section-title { font-size: 13px; color: var(--text2); letter-spacing: 2px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  @media (max-width: 768px) {
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: none; z-index: 90; margin-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+    .container { padding-bottom: 72px; }
+    .bulk-bar { bottom: 72px; }
+    .tab-item { font-size: 10px; padding: 8px 4px; }
+  }
+
 .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 
   .btn {
@@ -432,6 +449,29 @@
     </div>
   </header>
 
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-item active" data-tab="records" onclick="switchTab('records', this)">
+      <span class="tab-icon">&#9776;</span>
+      <span>紀錄</span>
+    </button>
+    <button class="tab-item" data-tab="dashboard" onclick="switchTab('dashboard', this)">
+      <span class="tab-icon">&#9688;</span>
+      <span>總覽</span>
+    </button>
+    <button class="tab-item" data-tab="ai" onclick="switchTab('ai', this)">
+      <span class="tab-icon">&#10024;</span>
+      <span>AI</span>
+    </button>
+    <button class="tab-item" data-tab="settings" onclick="switchTab('settings', this)">
+      <span class="tab-icon">&#9881;</span>
+      <span>設定</span>
+    </button>
+  </nav>
+
+  <!-- Dashboard Tab -->
+  <div class="tab-page" id="tab-dashboard">
+
   <!-- Stats -->
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
@@ -502,13 +542,16 @@
     <canvas id="pnl-chart" height="100"></canvas>
   </div>
 
+  </div><!-- /tab-dashboard -->
+
+  <!-- Records Tab -->
+  <div class="tab-page active" id="tab-records">
+
   <!-- Toolbar -->
   <div class="toolbar">
     <button class="btn" onclick="loadTrades()" style="letter-spacing:1px">⟳ 重新整理</button>
 <button class="btn primary" onclick="openModal()">+ 新增交易</button>
 <button class="btn" id="sync-btn" onclick="syncBingX()" style="border-color:var(--yellow);color:var(--yellow)">⇄ 同步 BingX 持倉</button>
-<button class="btn" onclick="openSettings()" style="border-color:var(--cyan);color:var(--cyan)">⚙ BingX 設定</button>
-<button class="btn" id="ai-btn" onclick="openAiAnalysis()" style="border-color:#9b8fc0;color:#9b8fc0">&#10024; AI 分析</button>
     <div class="filter-group">
       <select id="month-select" onchange="setMonth(this.value)">
         <option value="ALL">全部月份</option>
@@ -549,7 +592,64 @@
       </tbody>
     </table>
   </div>
-</div>
+
+  </div><!-- /tab-records -->
+
+  <!-- AI Tab -->
+  <div class="tab-page" id="tab-ai">
+    <div style="max-width:600px;margin:0 auto">
+      <div class="tab-section-title">AI 交易心理分析</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.9">
+        分析最近 30 筆已平倉交易，判斷是否有情緒交易、FOMO 或策略一致性問題。<br>
+        需要至少 3 筆平倉紀錄才能進行分析。
+      </p>
+      <div id="ai-content" style="font-size:13px;line-height:1.9;color:var(--text)">
+        <div id="ai-loading" style="display:none;text-align:center;padding:40px 0;color:var(--text2)">分析中，請稍候...</div>
+        <div id="ai-result" style="white-space:pre-wrap"></div>
+        <div id="ai-error" style="color:var(--red)"></div>
+      </div>
+      <div id="ai-meta" style="font-size:11px;color:var(--text2);margin-top:12px"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button class="btn primary" id="ai-run-btn" onclick="runAiAnalysis()" style="border-color:#9b8fc0;color:#9b8fc0">開始分析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div class="tab-page" id="tab-settings">
+    <div style="max-width:460px;margin:0 auto">
+      <div class="tab-section-title">BingX API 設定</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.9">
+        前往 BingX → 帳戶設定 → API 管理，建立 API Key 並開啟<strong style="color:var(--text)">合約交易讀取</strong>權限。<br>
+        你的 Key 只儲存在伺服器上，不會洩露給其他人。
+      </p>
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="text" id="s-api-key" placeholder="貼上你的 API Key" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Secret Key</label>
+          <input type="password" id="s-secret" placeholder="貼上你的 Secret Key" autocomplete="off">
+          <span style="font-size:11px;color:var(--text2)">輸入新值才會更新；留空表示不更改</span>
+        </div>
+        <div class="form-group">
+          <label>初始資產（USDT）</label>
+          <div style="display:flex;gap:8px">
+            <input type="number" id="s-capital" placeholder="例：1000" step="any" min="0" style="flex:1">
+            <button class="btn" onclick="fetchCapitalFromBingX()" style="white-space:nowrap;flex:none">從 BingX 抓取</button>
+          </div>
+          <span style="font-size:11px;color:var(--text2)">用來計算總報酬率</span>
+        </div>
+      </div>
+      <div id="settings-status" style="font-size:12px;min-height:18px;margin-top:12px;color:var(--text2)"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <button class="btn primary" onclick="saveSettings()">儲存設定</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
 
 <!-- Bulk Action Bar -->
 <div class="bulk-bar" id="bulk-bar">
@@ -564,60 +664,6 @@
 <!-- Image Lightbox -->
 <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;align-items:center;justify-content:center;" onclick="closeLightbox()">
   <img id="lightbox-img" style="max-width:95vw;max-height:95vh;border-radius:6px;object-fit:contain">
-</div>
-
-<!-- Settings Modal -->
-<div class="modal-overlay" id="settings-modal">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-title">BingX API 設定</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.8">
-      前往 BingX → 帳戶設定 → API 管理，建立 API Key 並開啟<strong style="color:var(--text)">合約交易讀取</strong>權限。<br>
-      你的 Key 只儲存在伺服器上，不會洩露給其他人。
-    </p>
-    <div class="form-grid" style="grid-template-columns:1fr">
-      <div class="form-group">
-        <label>API Key</label>
-        <input type="text" id="s-api-key" placeholder="貼上你的 API Key" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label>Secret Key</label>
-        <input type="password" id="s-secret" placeholder="貼上你的 Secret Key" autocomplete="off">
-        <span style="font-size:11px;color:var(--text2)">輸入新值才會更新；留空表示不更改</span>
-      </div>
-      <div class="form-group">
-        <label>初始資產（USDT）</label>
-        <div style="display:flex;gap:8px">
-          <input type="number" id="s-capital" placeholder="例：1000" step="any" min="0" style="flex:1">
-          <button class="btn" onclick="fetchCapitalFromBingX()" style="white-space:nowrap;flex:none">從 BingX 抓取</button>
-        </div>
-        <span style="font-size:11px;color:var(--text2)">用來計算總報酬率</span>
-      </div>
-    </div>
-    <div id="settings-status" style="font-size:12px;min-height:18px;margin-top:12px;color:var(--text2)"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeSettings()">取消</button>
-      <button class="btn primary" onclick="saveSettings()">儲存</button>
-    </div>
-  </div>
-</div>
-
-<!-- AI Analysis Modal -->
-<div class="modal-overlay" id="ai-modal">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-title" style="color:#9b8fc0">&#10024; AI 交易心理分析</div>
-    <div id="ai-content" style="min-height:120px;font-size:13px;line-height:1.9;color:var(--text)">
-      <div id="ai-loading" style="display:none;text-align:center;padding:40px 0;color:var(--text2)">
-        分析中，請稍候...
-      </div>
-      <div id="ai-result" style="white-space:pre-wrap"></div>
-      <div id="ai-error" style="color:var(--red)"></div>
-    </div>
-    <div id="ai-meta" style="font-size:11px;color:var(--text2);margin-top:12px"></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeAiAnalysis()">關閉</button>
-      <button class="btn primary" id="ai-run-btn" onclick="runAiAnalysis()">開始分析</button>
-    </div>
-  </div>
 </div>
 
 <!-- Modal -->
@@ -1485,7 +1531,10 @@ function showToast(msg, color) {
   }, 2500);
 }
 
-async function openSettings() {
+function openSettings() { switchTab('settings'); }
+function closeSettings() { switchTab('records'); }
+
+async function loadSettingsData() {
   document.getElementById('settings-status').textContent = '';
   document.getElementById('s-api-key').value = '';
   document.getElementById('s-secret').value = '';
@@ -1503,11 +1552,6 @@ async function openSettings() {
     }
     if (d.initial_capital) document.getElementById('s-capital').value = d.initial_capital;
   }
-  document.getElementById('settings-modal').classList.add('open');
-}
-
-function closeSettings() {
-  document.getElementById('settings-modal').classList.remove('open');
 }
 
 async function saveSettings() {
@@ -1562,27 +1606,8 @@ async function loadBalance() {
   }
 }
 
-document.getElementById('settings-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeSettings();
-});
-
-document.getElementById('ai-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeAiAnalysis();
-});
-
-function openAiAnalysis() {
-  document.getElementById('ai-result').textContent = '';
-  document.getElementById('ai-error').textContent = '';
-  document.getElementById('ai-loading').style.display = 'none';
-  document.getElementById('ai-meta').textContent = '';
-  document.getElementById('ai-run-btn').disabled = false;
-  document.getElementById('ai-run-btn').textContent = '開始分析';
-  document.getElementById('ai-modal').classList.add('open');
-}
-
-function closeAiAnalysis() {
-  document.getElementById('ai-modal').classList.remove('open');
-}
+function openAiAnalysis() { switchTab('ai'); }
+function closeAiAnalysis() { switchTab('records'); }
 
 async function runAiAnalysis() {
   const btn = document.getElementById('ai-run-btn');
@@ -1691,10 +1716,27 @@ async function bulkDelete() {
   showToast(`已刪除 ${ids.length} 筆`, 'var(--red)');
 }
 
+// ── Tab Navigation ──────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-item[data-tab]').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  const activeBtn = btn || document.querySelector(`.tab-item[data-tab="${name}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  if (name === 'dashboard') {
+    renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
+  } else if (name === 'settings') {
+    loadSettingsData();
+  }
+  window.scrollTo(0, 0);
+}
+
 // ── P&L Chart ───────────────────────────────────────────────
 let pnlChart = null;
+let currentChartPeriod = 'week';
 
 function renderChart(period, btn) {
+  currentChartPeriod = period;
   document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
