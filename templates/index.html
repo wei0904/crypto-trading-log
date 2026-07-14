@@ -551,6 +551,41 @@
     .auth-logo h2 { font-size: 15px; letter-spacing: 2px; }
     .auth-form { gap: 11px; }
   }
+
+  /* ── Advanced analytics ───────────────────────────────── */
+  .adv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .adv-card {
+    background: linear-gradient(160deg, var(--bg2) 0%, var(--bg) 100%);
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.25s, transform 0.2s;
+  }
+  .adv-card:hover { border-color: var(--purple); transform: translateY(-1px); }
+  .adv-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--purple), transparent 80%);
+    box-shadow: 0 0 8px var(--purple);
+  }
+  .adv-label { font-size: 9px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .adv-label::before { content: ''; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 6px var(--purple); flex-shrink: 0; }
+  .adv-value { font-size: 20px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--purple); line-height: 1.1; }
+  .adv-sub { font-size: 10px; color: var(--text3); margin-top: 5px; letter-spacing: 1px; }
+
+  /* ── Monthly report ───────────────────────────────────── */
+  .monthly-section { margin-top: 16px; }
+  .section-label {
+    font-size: 10px; color: var(--text3); letter-spacing: 3px; text-transform: uppercase;
+    font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before {
+    content: ''; display: inline-block; width: 3px; height: 14px;
+    background: var(--yellow); border-radius: 2px; box-shadow: 0 0 8px var(--yellow);
+  }
+
+  @media (max-width: 768px) {
+    .adv-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .adv-value { font-size: 17px; }
+  }
 </style>
 </head>
 <body>
@@ -697,6 +732,62 @@
       </div>
     </div>
     <canvas id="pnl-chart" height="100"></canvas>
+  </div>
+
+  <!-- Advanced Stats Row -->
+  <div class="adv-grid" id="adv-grid">
+    <div class="adv-card">
+      <div class="adv-label">期望值 / 每筆</div>
+      <div class="adv-value" id="stat-ev">-</div>
+      <div class="adv-sub" id="stat-ev-sub"></div>
+    </div>
+    <div class="adv-card">
+      <div class="adv-label">最大回撤</div>
+      <div class="adv-value" id="stat-mdd" style="color:var(--red)">-</div>
+      <div class="adv-sub" id="stat-mdd-sub"></div>
+    </div>
+    <div class="adv-card">
+      <div class="adv-label">當前連續</div>
+      <div class="adv-value" id="stat-cur-streak">-</div>
+      <div class="adv-sub" id="stat-cur-streak-sub"></div>
+    </div>
+    <div class="adv-card">
+      <div class="adv-label">最長連勝 / 連敗</div>
+      <div class="adv-value" id="stat-streak-rec" style="font-size:16px">-</div>
+    </div>
+  </div>
+
+  <!-- Hour Analysis Chart -->
+  <div class="chart-section" style="margin-bottom:16px">
+    <div class="chart-header">
+      <span class="chart-title">時段勝率分析</span>
+      <span style="font-size:10px;color:var(--text3);letter-spacing:1px">綠≥60% 黃≥40% 紅&lt;40%</span>
+    </div>
+    <canvas id="hour-chart" height="75"></canvas>
+    <div style="font-size:10px;color:var(--text3);text-align:center;margin-top:6px;letter-spacing:1px">進場時間（24H）</div>
+  </div>
+
+  <!-- Monthly Report -->
+  <div class="monthly-section">
+    <div class="section-label">月報表</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>月份</th>
+            <th style="text-align:center">交易 / 平倉</th>
+            <th style="text-align:center">勝率</th>
+            <th style="text-align:right">毛損益</th>
+            <th style="text-align:right">淨損益</th>
+            <th style="text-align:right">最佳一筆</th>
+            <th style="text-align:right">最差一筆</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-tbody">
+          <tr><td colspan="7" class="empty-state">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   </div><!-- /tab-dashboard -->
@@ -1139,6 +1230,9 @@ async function loadTrades() {
     renderTable();
     loadStats();
     renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
+    renderAdvancedStats();
+    renderHourChart();
+    renderMonthlyReport();
   } catch (err) {
     document.getElementById('trade-tbody').innerHTML =
       `<tr><td colspan="13" class="empty-state" style="color:var(--red)">[ 無法連線到伺服器：${err.message} ]</td></tr>`;
@@ -1830,6 +1924,171 @@ async function syncBingX(silent = false) {
   }
 }
 
+// ── Advanced Analytics ───────────────────────────────────────
+let hourChart = null;
+
+function calcAdvancedStats() {
+  const closed = allTrades.filter(t => ['止盈','止損','已平倉'].includes(t.status) && t.pnl != null);
+  const sorted = [...closed].sort((a, b) => {
+    const da = a.date + ' ' + (a.trade_time || '00:00');
+    const db = b.date + ' ' + (b.trade_time || '00:00');
+    return da < db ? -1 : da > db ? 1 : 0;
+  });
+
+  // Expected Value
+  const wins = sorted.filter(t => t.pnl > 0);
+  const losses = sorted.filter(t => t.pnl < 0);
+  const winRate = sorted.length > 0 ? wins.length / sorted.length : 0;
+  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+  const ev = winRate * avgWin - (1 - winRate) * avgLoss;
+
+  // Max Drawdown (on cumulative net P&L)
+  let cum = 0, peak = 0, maxDD = 0, maxDDPct = 0;
+  for (const t of sorted) {
+    cum += (t.pnl || 0) - (t.fee || 0);
+    if (cum > peak) peak = cum;
+    const dd = peak - cum;
+    if (dd > maxDD) { maxDD = dd; maxDDPct = peak > 0 ? dd / peak * 100 : 0; }
+  }
+
+  // Streaks
+  let bestWin = 0, worstLoss = 0, tempW = 0, tempL = 0, curType = null, curStreak = 0;
+  for (const t of sorted) {
+    if (t.pnl > 0) {
+      tempW++; tempL = 0;
+      bestWin = Math.max(bestWin, tempW);
+      curType === 'win' ? curStreak++ : (curType = 'win', curStreak = 1);
+    } else {
+      tempL++; tempW = 0;
+      worstLoss = Math.max(worstLoss, tempL);
+      curType === 'loss' ? curStreak++ : (curType = 'loss', curStreak = 1);
+    }
+  }
+
+  return { ev, maxDD, maxDDPct, curStreak, curType, bestWin, worstLoss, count: sorted.length };
+}
+
+function renderAdvancedStats() {
+  const s = calcAdvancedStats();
+
+  const evEl = document.getElementById('stat-ev');
+  const evSub = document.getElementById('stat-ev-sub');
+  if (s.count === 0) { evEl.textContent = '-'; evSub.textContent = '至少需要 1 筆平倉'; }
+  else {
+    evEl.textContent = (s.ev >= 0 ? '+' : '') + s.ev.toFixed(2) + ' U';
+    evEl.style.color = s.ev >= 0 ? 'var(--green)' : 'var(--red)';
+    evSub.textContent = s.ev >= 0 ? '正期望值，長期可獲利' : '負期望值，需改善策略';
+    evSub.style.color = s.ev >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  const mddEl = document.getElementById('stat-mdd');
+  const mddSub = document.getElementById('stat-mdd-sub');
+  if (s.maxDD === 0) { mddEl.textContent = s.count ? '0 U' : '-'; mddSub.textContent = ''; }
+  else {
+    mddEl.textContent = '-' + s.maxDD.toFixed(2) + ' U';
+    mddSub.textContent = '峰谷淨值跌幅 ' + s.maxDDPct.toFixed(1) + '%';
+  }
+
+  const streakEl = document.getElementById('stat-cur-streak');
+  const streakSub = document.getElementById('stat-cur-streak-sub');
+  if (!s.curType) { streakEl.textContent = '-'; streakSub.textContent = ''; }
+  else {
+    streakEl.textContent = s.curStreak + (s.curType === 'win' ? ' 連勝' : ' 連敗');
+    streakEl.style.color = s.curType === 'win' ? 'var(--green)' : 'var(--red)';
+    streakSub.textContent = '當前最新走勢';
+  }
+
+  const recEl = document.getElementById('stat-streak-rec');
+  if (s.count === 0) recEl.innerHTML = '-';
+  else recEl.innerHTML = `<span style="color:var(--green)">${s.bestWin}連勝</span><span style="color:var(--text3);font-size:13px"> / </span><span style="color:var(--red)">${s.worstLoss}連敗</span>`;
+}
+
+function renderHourChart() {
+  const closed = allTrades.filter(t => ['止盈','止損','已平倉'].includes(t.status) && t.pnl != null && t.trade_time);
+  const hours = Array.from({length: 24}, () => ({ w: 0, l: 0 }));
+  for (const t of closed) {
+    const h = parseInt((t.trade_time || '').split(':')[0]);
+    if (h >= 0 && h < 24) { t.pnl > 0 ? hours[h].w++ : hours[h].l++; }
+  }
+  const labels = Array.from({length: 24}, (_, i) => i.toString().padStart(2,'0'));
+  const winRates = hours.map(h => (h.w + h.l) > 0 ? Math.round(h.w / (h.w + h.l) * 100) : null);
+  const counts = hours.map(h => h.w + h.l);
+
+  const ctx = document.getElementById('hour-chart').getContext('2d');
+  if (hourChart) hourChart.destroy();
+  hourChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: winRates,
+        backgroundColor: winRates.map(r => r === null ? 'rgba(255,255,255,0.04)' : r >= 60 ? 'rgba(0,200,150,0.55)' : r >= 40 ? 'rgba(240,184,64,0.5)' : 'rgba(224,92,106,0.5)'),
+        borderColor: winRates.map(r => r === null ? 'transparent' : r >= 60 ? '#00c896' : r >= 40 ? '#f0b840' : '#e05c6a'),
+        borderWidth: 1, borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const h = ctx.dataIndex;
+              if (!counts[h]) return '無紀錄';
+              return `勝率 ${winRates[h]}%（${hours[h].w}勝 ${hours[h].l}敗，共${counts[h]}筆）`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#3d5a6e', font: { size: 10, family: 'Courier New' } }, grid: { color: '#141c21' } },
+        y: { min: 0, max: 100, ticks: { color: '#3d5a6e', font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#141c21' } }
+      }
+    }
+  });
+}
+
+function renderMonthlyReport() {
+  const tbody = document.getElementById('monthly-tbody');
+  const byMonth = {};
+  for (const t of allTrades) {
+    if (!t.date) continue;
+    const m = t.date.slice(0, 7);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(t);
+  }
+  const months = Object.keys(byMonth).sort().reverse();
+  if (!months.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state">暫無資料</td></tr>`; return; }
+
+  tbody.innerHTML = months.map(m => {
+    const ts = byMonth[m];
+    const closed = ts.filter(t => ['止盈','止損','已平倉'].includes(t.status) && t.pnl != null);
+    const wins = closed.filter(t => t.pnl > 0).length;
+    const wr = closed.length ? Math.round(wins / closed.length * 100) : null;
+    const gross = Math.round(closed.reduce((s, t) => s + t.pnl, 0) * 100) / 100;
+    const fees = Math.round(ts.reduce((s, t) => s + (t.fee || 0), 0) * 100) / 100;
+    const net = Math.round((gross - fees) * 100) / 100;
+    const pnls = closed.map(t => t.pnl);
+    const best = pnls.length ? Math.max(...pnls) : null;
+    const worst = pnls.length ? Math.min(...pnls) : null;
+    const wrC = wr === null ? 'var(--text3)' : wr >= 50 ? 'var(--green)' : 'var(--red)';
+    const netC = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--text3)';
+    const grossC = gross > 0 ? 'var(--green)' : gross < 0 ? 'var(--red)' : 'var(--text3)';
+    const fmt = v => (v >= 0 ? '+' : '') + v.toFixed(2) + ' U';
+    return `<tr>
+      <td style="font-family:'Courier New',monospace;font-size:12px;color:var(--cyan);font-weight:600">${m.replace('-','/')}</td>
+      <td style="text-align:center;color:var(--text)">${ts.length}<span style="color:var(--text3);font-size:10px"> / ${closed.length}</span></td>
+      <td style="text-align:center;color:${wrC};font-weight:700">${wr !== null ? wr + '%' : '-'}</td>
+      <td style="text-align:right;color:${grossC};font-family:'Courier New',monospace">${pnls.length ? fmt(gross) : '-'}</td>
+      <td style="text-align:right;color:${netC};font-family:'Courier New',monospace;font-weight:700">${closed.length ? fmt(net) : '-'}</td>
+      <td style="text-align:right;color:var(--green);font-family:'Courier New',monospace">${best !== null ? fmt(best) : '-'}</td>
+      <td style="text-align:right;color:var(--red);font-family:'Courier New',monospace">${worst !== null ? worst.toFixed(2) + ' U' : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
 initFeeRateDisplay();
 checkAuth().then(ok => {
   if (ok) {
@@ -1959,6 +2218,9 @@ function switchTab(name, btn) {
   if (name === 'dashboard') {
     renderChart(currentChartPeriod || 'week', document.getElementById('chart-' + (currentChartPeriod || 'week') + '-btn'));
     loadStats();
+    renderAdvancedStats();
+    renderHourChart();
+    renderMonthlyReport();
   } else if (name === 'settings') {
     loadSettingsData();
   }
