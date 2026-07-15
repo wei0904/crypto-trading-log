@@ -407,7 +407,7 @@
   .trade-cards { display: none; }
 
   @media (max-width: 768px) {
-    .container { padding: 12px; }
+    .container { padding: 12px; padding-bottom: 108px; }
 
     header { flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 0 16px; margin-bottom: 16px; border-image: none; border-bottom: 1px solid var(--border2); }
     .header-right { align-self: flex-end; margin-top: -52px; }
@@ -1639,10 +1639,25 @@ async function quickManual(id) {
 async function quickClose(id, status) {
   const t = allTrades.find(x => x.id === id);
   const body = { status };
-  if (t && t.risk_amount && t.rr_ratio) {
-    if (status === '止盈') body.pnl = parseFloat((t.risk_amount * t.rr_ratio).toFixed(2));
-    if (status === '止損') body.pnl = parseFloat((-t.risk_amount).toFixed(2));
+
+  if (status === '止損') {
+    if (t && t.risk_amount) {
+      // 有設止損金額 → 直接帶入，不用手打
+      body.pnl = parseFloat((-t.risk_amount).toFixed(2));
+    } else {
+      // 沒有設 → 跳輸入框
+      const input = prompt('請輸入虧損金額（自動補負號，例：50）');
+      if (input === null) return;
+      const v = parseFloat(input);
+      if (isNaN(v)) { alert('請輸入有效數字'); return; }
+      body.pnl = v > 0 ? -v : v;
+    }
+  } else if (status === '止盈') {
+    if (t && t.risk_amount && t.rr_ratio) {
+      body.pnl = parseFloat((t.risk_amount * t.rr_ratio).toFixed(2));
+    }
   }
+
   if (t && t.risk_amount && t.entry_price && t.stop_loss) {
     const posSize = t.risk_amount / Math.abs(t.entry_price - t.stop_loss);
     body.fee = parseFloat((posSize * t.entry_price * feeRate * 2).toFixed(4));
