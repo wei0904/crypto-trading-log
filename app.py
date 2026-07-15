@@ -362,21 +362,28 @@ def sync_bingx():
 
         active_trades = Trade.query.filter_by(status='進行中', trader=session['username']).all()
         for trade in active_trades:
-            symbol = f"{trade.coin}-USDT"
-            key = f"{symbol}_{trade.direction}"
-            if key in active_keys:
-                continue
-            start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
-            pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
-            fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
-            pnl_list = (pnl_resp.get('data') or {}).get('incomes', []) if pnl_resp.get('code') == 0 else []
-            fee_list = (fee_resp.get('data') or {}).get('incomes', []) if fee_resp.get('code') == 0 else []
-            pnl = round(sum(float(i.get('income', 0)) for i in pnl_list), 4)
-            fee = round(abs(sum(float(i.get('income', 0)) for i in fee_list)), 4)
-            trade.pnl = pnl
-            trade.fee = fee
-            trade.status = '止盈' if pnl > 0 else '止損'
-            auto_closed.append(trade.coin)
+            try:
+                symbol = f"{trade.coin}-USDT"
+                key = f"{symbol}_{trade.direction}"
+                if key in active_keys:
+                    continue
+                start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
+                pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
+                fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
+                raw_pnl = pnl_resp.get('data') if pnl_resp.get('code') == 0 else None
+                raw_fee = fee_resp.get('data') if fee_resp.get('code') == 0 else None
+                pnl_list = (raw_pnl.get('incomes', []) if isinstance(raw_pnl, dict) else raw_pnl if isinstance(raw_pnl, list) else [])
+                fee_list = (raw_fee.get('incomes', []) if isinstance(raw_fee, dict) else raw_fee if isinstance(raw_fee, list) else [])
+                pnl = round(sum(float(i.get('income', 0)) for i in pnl_list if isinstance(i, dict)), 4)
+                fee = round(abs(sum(float(i.get('income', 0)) for i in fee_list if isinstance(i, dict))), 4)
+                trade.pnl = pnl if pnl != 0 else None
+                trade.fee = fee if fee != 0 else None
+                trade.status = '止盈' if pnl > 0 else '止損' if pnl < 0 else '已平倉'
+                auto_closed.append(trade.coin)
+            except Exception:
+                # 單筆平倉失敗不影響其他同步
+                auto_closed.append(trade.coin)
+                trade.status = '已平倉'
 
         for pos in positions:
             size = float(pos.get('positionAmt') or 0)
