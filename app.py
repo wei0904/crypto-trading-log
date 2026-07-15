@@ -369,8 +369,8 @@ def sync_bingx():
             start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
             pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
             fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
-            pnl_list = pnl_resp.get('data', {}).get('incomes', []) if pnl_resp.get('code') == 0 else []
-            fee_list = fee_resp.get('data', {}).get('incomes', []) if fee_resp.get('code') == 0 else []
+            pnl_list = (pnl_resp.get('data') or {}).get('incomes', []) if pnl_resp.get('code') == 0 else []
+            fee_list = (fee_resp.get('data') or {}).get('incomes', []) if fee_resp.get('code') == 0 else []
             pnl = round(sum(float(i.get('income', 0)) for i in pnl_list), 4)
             fee = round(abs(sum(float(i.get('income', 0)) for i in fee_list)), 4)
             trade.pnl = pnl
