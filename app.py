@@ -326,6 +326,18 @@ def get_balance():
     return jsonify(result)
 
 
+@app.route('/api/debug-income/<int:trade_id>')
+@login_required
+def debug_income(trade_id):
+    trade = Trade.query.filter_by(id=trade_id, trader=session['username']).first_or_404()
+    api_key, secret = get_user_bingx_keys()
+    symbol = f"{trade.coin}-USDT"
+    start_ts = int(datetime.strptime(trade.date, '%Y-%m-%d').replace(tzinfo=TZ).timestamp() * 1000)
+    pnl_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'REALIZED_PNL', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
+    fee_resp = bingx_get('/openApi/swap/v2/user/income', {'symbol': symbol, 'incomeType': 'COMMISSION', 'startTime': start_ts, 'limit': 50}, api_key=api_key, secret=secret)
+    return jsonify({'trade': trade.to_dict(include_images=False), 'symbol': symbol, 'start_ts': start_ts, 'pnl_resp': pnl_resp, 'fee_resp': fee_resp})
+
+
 @app.route('/api/sync-bingx', methods=['POST'])
 @login_required
 def sync_bingx():
