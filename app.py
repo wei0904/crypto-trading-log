@@ -367,8 +367,13 @@ def sync_bingx():
         positions = pos_data.get('data', [])
         active_keys = set()
         for pos in positions:
-            if float(pos.get('positionAmt') or 0) != 0:
-                active_keys.add(f"{pos.get('symbol', '')}_{pos.get('positionSide', '')}")
+            size = float(pos.get('positionAmt') or 0)
+            if size != 0:
+                sym = pos.get('symbol', '')
+                side = pos.get('positionSide', '')
+                if side == 'BOTH':
+                    side = 'LONG' if size > 0 else 'SHORT'
+                active_keys.add(f"{sym}_{side}")
 
         added, skipped, auto_closed = [], [], []
 
@@ -404,6 +409,8 @@ def sync_bingx():
                 continue
             symbol = pos.get('symbol', '')
             side = pos.get('positionSide', '')
+            if side == 'BOTH':
+                side = 'LONG' if size > 0 else 'SHORT'
             coin = symbol.replace('-USDT', '').replace('-USDC', '').replace('-BUSD', '')
             key = f"{symbol}_{side}"
             tp = tpsl_map.get(key, {}).get('tp', 0)
