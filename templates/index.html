@@ -2109,6 +2109,7 @@ checkAuth().then(ok => {
   if (ok) {
     loadTrades();
     loadBalance();
+    syncBingX(true); // 初次載入立刻同步
     setInterval(() => syncBingX(true), 30000); // 每 30 秒靜默同步
   }
 });
