@@ -338,6 +338,125 @@ def debug_income(trade_id):
     return jsonify({'trade': trade.to_dict(include_images=False), 'symbol': symbol, 'start_ts': start_ts, 'pnl_resp': pnl_resp, 'fee_resp': fee_resp})
 
 
+def _sync_closed_history(api_key, secret, trader):
+    """補抓最近 7 天內已平倉、但從未同步過的 BingX 倉位。"""
+    added = []
+    try:
+        start_ts = int((time.time() - 7 * 86400) * 1000)
+        income_data = bingx_get('/openApi/swap/v2/user/income', {
+            'incomeType': 'REALIZED_PNL',
+            'startTime': start_ts,
+            'limit': 200,
+        }, api_key=api_key, secret=secret)
+        if income_data.get('code') != 0:
+            return added
+
+        raw = income_data.get('data', [])
+        incomes = (raw.get('incomes', []) if isinstance(raw, dict)
+                   else raw if isinstance(raw, list) else [])
+
+        # 按幣種分組
+        by_sym = {}
+        for item in incomes:
+            sym = item.get('symbol', '')
+            if sym and float(item.get('income', 0)) != 0:
+                by_sym.setdefault(sym, []).append(item)
+
+        for sym, items in by_sym.items():
+            coin = sym.replace('-USDT', '').replace('-USDC', '').replace('-BUSD', '')
+            items.sort(key=lambda x: int(x.get('time', 0)))
+
+            # 把時間相近（2 小時內）的 income 合併為「一筆交易」
+            groups = []
+            cur = [items[0]]
+            for item in items[1:]:
+                if int(item['time']) - int(cur[-1]['time']) < 7_200_000:
+                    cur.append(item)
+                else:
+                    groups.append(cur)
+                    cur = [item]
+            groups.append(cur)
+
+            for group in groups:
+                total_pnl = round(sum(float(i.get('income', 0)) for i in group), 4)
+                if total_pnl == 0:
+                    continue
+
+                close_ts = int(group[-1]['time'])
+                close_dt = datetime.fromtimestamp(close_ts / 1000, tz=TZ)
+                date_str = close_dt.strftime('%Y-%m-%d')
+
+                # 已有同一幣種 + 同日期的已平倉紀錄 → 略過
+                existing = Trade.query.filter(
+                    Trade.coin == coin,
+                    Trade.trader == trader,
+                    Trade.date == date_str,
+                    Trade.status.in_(['止盈', '止損', '已平倉']),
+                ).first()
+                if existing:
+                    continue
+
+                # 抓訂單歷史，取得進場方向和均價
+                direction = None
+                entry_price = 0.0
+                open_dt = close_dt
+                try:
+                    order_data = bingx_get('/openApi/swap/v2/trade/allOrders', {
+                        'symbol': sym,
+                        'startTime': close_ts - 7 * 86_400_000,
+                        'limit': 100,
+                    }, api_key=api_key, secret=secret)
+                    if order_data.get('code') == 0:
+                        od = order_data.get('data', {})
+                        orders = (od.get('orders', []) if isinstance(od, dict)
+                                  else od if isinstance(od, list) else [])
+                        for o in sorted(orders, key=lambda x: int(x.get('time', 0))):
+                            if o.get('status') != 'FILLED':
+                                continue
+                            if int(o.get('time', 0)) > close_ts:
+                                continue
+                            if o.get('type') not in ('MARKET', 'LIMIT'):
+                                continue
+                            avg = float(o.get('avgPrice') or 0)
+                            if avg == 0:
+                                continue
+                            ps = o.get('positionSide', '')
+                            sd = o.get('side', '')
+                            if (ps in ('LONG', 'BOTH') and sd == 'BUY'):
+                                direction = 'LONG'
+                                entry_price = avg
+                                open_dt = datetime.fromtimestamp(int(o['time']) / 1000, tz=TZ)
+                                break
+                            elif (ps in ('SHORT', 'BOTH') and sd == 'SELL'):
+                                direction = 'SHORT'
+                                entry_price = avg
+                                open_dt = datetime.fromtimestamp(int(o['time']) / 1000, tz=TZ)
+                                break
+                except Exception:
+                    pass
+
+                if not direction or entry_price == 0:
+                    continue
+
+                trade = Trade(
+                    trader=trader,
+                    coin=coin,
+                    direction=direction,
+                    entry_price=entry_price,
+                    take_profit=0.0,
+                    stop_loss=0.0,
+                    pnl=total_pnl,
+                    status='止盈' if total_pnl > 0 else '止損',
+                    date=open_dt.strftime('%Y-%m-%d'),
+                    trade_time=open_dt.strftime('%H:%M'),
+                )
+                db.session.add(trade)
+                added.append(coin)
+    except Exception as e:
+        print(f'_sync_closed_history error: {e}')
+    return added
+
+
 @app.route('/api/sync-bingx', methods=['POST'])
 @login_required
 def sync_bingx():
@@ -444,6 +563,10 @@ def sync_bingx():
             )
             db.session.add(trade)
             added.append(coin)
+        # ── 補抓已平倉但從未同步的倉位 ──────────────────────────────
+        history_added = _sync_closed_history(api_key, secret, session['username'])
+        added.extend(history_added)
+
         db.session.commit()
         return jsonify({'added': added, 'skipped': skipped, 'closed': auto_closed})
     except Exception as e:
