@@ -24,7 +24,9 @@ BINGX_BASE = 'https://open-api.bingx.com'
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'please-change-this-secret-key')
 
-db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:EHDvFFYYQFljNZvUhVeaJJkVaEulBIuk@zephyr.proxy.rlwy.net:49839/railway')
+db_url = os.environ.get('DATABASE_URL')
+if not db_url:
+    raise RuntimeError('DATABASE_URL 環境變數未設定，請在 Railway 專案的 Variables 中設定後再啟動')
 if db_url.startswith('postgres://'):
     db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
@@ -140,6 +142,22 @@ def logout():
     return jsonify({'ok': True})
 
 
+@app.route('/auth/change-password', methods=['POST'])
+@login_required
+def change_password():
+    d = request.json
+    old_password = d.get('old_password', '')
+    new_password = d.get('new_password', '')
+    user = User.query.filter_by(username=session['username']).first()
+    if not user or not check_password_hash(user.password_hash, old_password):
+        return jsonify({'error': '目前密碼不正確'}), 401
+    if len(new_password) < 6:
+        return jsonify({'error': '新密碼至少 6 個字元'}), 400
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
 @app.route('/auth/me')
 def me():
     if 'username' not in session:
@@ -158,9 +176,10 @@ def index():
 
 
 @app.route('/api/debug')
+@login_required
 def debug_db():
     keys = [k for k in os.environ if not k.startswith('PATH') and 'SECRET' not in k and 'PASSWORD' not in k]
-    return jsonify({'computed': db_url[:40], 'env_keys': sorted(keys)})
+    return jsonify({'db_connected': bool(db_url), 'env_keys': sorted(keys)})
 
 
 @app.route('/api/debug-sync')
@@ -384,17 +403,6 @@ def _sync_closed_history(api_key, secret, trader):
 
                 close_ts = int(group[-1]['time'])
                 close_dt = datetime.fromtimestamp(close_ts / 1000, tz=TZ)
-                date_str = close_dt.strftime('%Y-%m-%d')
-
-                # 已有同一幣種 + 同日期的已平倉紀錄 → 略過
-                existing = Trade.query.filter(
-                    Trade.coin == coin,
-                    Trade.trader == trader,
-                    Trade.date == date_str,
-                    Trade.status.in_(['止盈', '止損', '已平倉']),
-                ).first()
-                if existing:
-                    continue
 
                 # 抓訂單歷史，取得進場方向和均價
                 direction = None
@@ -404,6 +412,7 @@ def _sync_closed_history(api_key, secret, trader):
                     order_data = bingx_get('/openApi/swap/v2/trade/allOrders', {
                         'symbol': sym,
                         'startTime': close_ts - 7 * 86_400_000,
+                        'endTime': close_ts,
                         'limit': 100,
                     }, api_key=api_key, secret=secret)
                     if order_data.get('code') == 0:
@@ -436,6 +445,17 @@ def _sync_closed_history(api_key, secret, trader):
                     pass
 
                 if not direction or entry_price == 0:
+                    continue
+
+                # 已有同一幣種 + 同方向 + 同進場價的已平倉紀錄 → 略過（避免重複寫入）
+                existing = Trade.query.filter(
+                    Trade.coin == coin,
+                    Trade.trader == trader,
+                    Trade.direction == direction,
+                    Trade.entry_price == entry_price,
+                    Trade.status.in_(['止盈', '止損', '已平倉']),
+                ).first()
+                if existing:
                     continue
 
                 trade = Trade(
