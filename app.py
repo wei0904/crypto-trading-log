@@ -395,6 +395,22 @@ def _sync_closed_history(api_key, secret, trader):
             coin = sym.replace('-USDT', '').replace('-USDC', '').replace('-BUSD', '')
             items.sort(key=lambda x: int(x.get('time', 0)))
 
+            # 手續費另外用 COMMISSION 類型查，每個幣種查一次就好
+            fee_items = []
+            try:
+                fee_data = bingx_get('/openApi/swap/v2/user/income', {
+                    'symbol': sym,
+                    'incomeType': 'COMMISSION',
+                    'startTime': start_ts,
+                    'limit': 200,
+                }, api_key=api_key, secret=secret)
+                if fee_data.get('code') == 0:
+                    fraw = fee_data.get('data', [])
+                    fee_items = (fraw.get('incomes', []) if isinstance(fraw, dict)
+                                 else fraw if isinstance(fraw, list) else [])
+            except Exception:
+                pass
+
             # 把時間相近（2 小時內）的 income 合併為「一筆交易」
             groups = []
             cur = [items[0]]
@@ -418,6 +434,8 @@ def _sync_closed_history(api_key, secret, trader):
                 direction = None
                 entry_price = 0.0
                 open_dt = close_dt
+                open_ts = close_ts
+                orders = []
                 try:
                     order_data = bingx_get('/openApi/swap/v2/trade/allOrders', {
                         'symbol': sym,
@@ -444,18 +462,42 @@ def _sync_closed_history(api_key, secret, trader):
                             if (ps in ('LONG', 'BOTH') and sd == 'BUY'):
                                 direction = 'LONG'
                                 entry_price = avg
-                                open_dt = datetime.fromtimestamp(int(o['time']) / 1000, tz=TZ)
+                                open_ts = int(o['time'])
+                                open_dt = datetime.fromtimestamp(open_ts / 1000, tz=TZ)
                                 break
                             elif (ps in ('SHORT', 'BOTH') and sd == 'SELL'):
                                 direction = 'SHORT'
                                 entry_price = avg
-                                open_dt = datetime.fromtimestamp(int(o['time']) / 1000, tz=TZ)
+                                open_ts = int(o['time'])
+                                open_dt = datetime.fromtimestamp(open_ts / 1000, tz=TZ)
                                 break
                 except Exception:
                     pass
 
                 if not direction or entry_price == 0:
                     continue
+
+                # 倉位平掉後 TP/SL 委託就不在 openOrders 裡了，改從訂單歷史撈
+                take_profit = 0.0
+                stop_loss = 0.0
+                for o in orders:
+                    o_ts = int(o.get('time', 0) or 0)
+                    if not (open_ts <= o_ts <= close_ts + 60_000):
+                        continue
+                    sp = float(o.get('stopPrice') or 0)
+                    if not sp:
+                        continue
+                    o_type = o.get('type', '')
+                    if o_type in ('TAKE_PROFIT_MARKET', 'TAKE_PROFIT') and not take_profit:
+                        take_profit = sp
+                    elif o_type in ('STOP_MARKET', 'STOP') and not stop_loss:
+                        stop_loss = sp
+
+                fee = round(abs(sum(
+                    float(i.get('income', 0)) for i in fee_items
+                    if isinstance(i, dict)
+                    and open_ts <= int(i.get('time', 0) or 0) <= close_ts + 60_000
+                )), 4)
 
                 # 已有同一幣種 + 同方向 + 同進場價的已平倉紀錄 → 略過（避免重複寫入）
                 existing = Trade.query.filter(
@@ -473,8 +515,11 @@ def _sync_closed_history(api_key, secret, trader):
                     coin=coin,
                     direction=direction,
                     entry_price=entry_price,
-                    take_profit=0.0,
-                    stop_loss=0.0,
+                    take_profit=take_profit,
+                    stop_loss=stop_loss,
+                    rr_ratio=(calc_rr(entry_price, take_profit, stop_loss, direction)
+                              if take_profit and stop_loss else None),
+                    fee=fee or None,
                     pnl=total_pnl,
                     status='止盈' if total_pnl > 0 else '止損',
                     date=open_dt.strftime('%Y-%m-%d'),
@@ -684,8 +729,12 @@ def ai_analyze():
         # 金鑰走 header，避免出錯時被 requests 的錯誤訊息連同 URL 一起印到前端
         url = ('https://generativelanguage.googleapis.com/v1beta/models/'
                f'{GEMINI_MODEL}:generateContent')
-        body = {'contents': [{'parts': [{'text': prompt}]}]}
-        resp = rq.post(url, json=body, timeout=60,
+        body = {
+            'contents': [{'parts': [{'text': prompt}]}],
+            # 2.5 系列預設會先做內部推理才回答，這裡不需要，關掉可大幅縮短等待
+            'generationConfig': {'thinkingConfig': {'thinkingBudget': 0}},
+        }
+        resp = rq.post(url, json=body, timeout=90,
                        headers={'x-goog-api-key': api_key})
         if resp.status_code != 200:
             detail = resp.json().get('error', {}).get('message', resp.text[:300])

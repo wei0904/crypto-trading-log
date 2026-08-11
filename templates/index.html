@@ -359,8 +359,14 @@
   .modal-title { font-size: 15px; letter-spacing: 2px; color: var(--cyan); font-style: italic; margin-bottom: 24px; }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  /* grid 項目預設 min-width:auto，不會縮到比內容窄。表單裡的 file / date
+     輸入框固有寬度很大，會把整個 grid 撐得比 modal 還寬，造成畫面可以左右滑 */
+  .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .form-group.full { grid-column: 1 / -1; }
+  .form-group > input,
+  .form-group > select,
+  .form-group > textarea { width: 100%; max-width: 100%; }
+  input[type=file] { max-width: 100%; }
 
   label { font-size: 10px; letter-spacing: 2px; color: var(--text2); text-transform: uppercase; }
 
@@ -930,7 +936,7 @@
 </div>
 
 <!-- Toast -->
-<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 22px;border-radius:8px;font-size:13px;letter-spacing:1px;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:300;pointer-events:none;white-space:nowrap;"></div>
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 22px;border-radius:8px;font-size:13px;letter-spacing:1px;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:300;pointer-events:none;max-width:calc(100vw - 32px);text-align:center;"></div>
 
 <!-- Image Lightbox -->
 <div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;align-items:center;justify-content:center;" onclick="closeLightbox()">
