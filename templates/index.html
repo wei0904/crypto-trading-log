@@ -473,6 +473,9 @@
     .modal { padding: 20px; margin: 12px; max-width: calc(100% - 24px); max-height: 85vh; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
+
+    /* iOS 在字級小於 16px 的輸入框上會自動縮放整頁，聚焦時畫面會忽大忽小 */
+    input, select, textarea { font-size: 16px; }
   }
 
   @media (max-width: 480px) {

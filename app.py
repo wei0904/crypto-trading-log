@@ -9,7 +9,7 @@ from functools import wraps
 from flask import Flask, render_template, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo('Asia/Taipei')
@@ -21,8 +21,13 @@ BINGX_API_KEY = os.environ.get('BINGX_API_KEY', '')
 BINGX_SECRET = os.environ.get('BINGX_SECRET', '')
 BINGX_BASE = 'https://open-api.bingx.com'
 
+# gemini-1.5-flash 已被 Google 退役，呼叫會回 404
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'please-change-this-secret-key')
+app.permanent_session_lifetime = timedelta(days=90)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 db_url = os.environ.get('DATABASE_URL')
 if not db_url:
@@ -118,6 +123,7 @@ def register():
     )
     db.session.add(user)
     db.session.commit()
+    session.permanent = True
     session['username'] = username
     session['display_name'] = display_name
     return jsonify({'username': username, 'display_name': display_name}), 201
@@ -131,6 +137,7 @@ def login():
     user = User.query.filter_by(username=username).first()
     if not user or not check_password_hash(user.password_hash, password):
         return jsonify({'error': '帳號或密碼錯誤'}), 401
+    session.permanent = True
     session['username'] = username
     session['display_name'] = user.display_name or username
     return jsonify({'username': username, 'display_name': user.display_name or username})
@@ -671,14 +678,19 @@ def ai_analyze():
 請保持客觀、直接，不要過度安慰。如果有問題就直說。"""
 
     try:
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}'
+        # 金鑰走 header，避免出錯時被 requests 的錯誤訊息連同 URL 一起印到前端
+        url = ('https://generativelanguage.googleapis.com/v1beta/models/'
+               f'{GEMINI_MODEL}:generateContent')
         body = {'contents': [{'parts': [{'text': prompt}]}]}
-        resp = rq.post(url, json=body, timeout=30)
-        resp.raise_for_status()
+        resp = rq.post(url, json=body, timeout=60,
+                       headers={'x-goog-api-key': api_key})
+        if resp.status_code != 200:
+            detail = resp.json().get('error', {}).get('message', resp.text[:300])
+            return jsonify({'error': f'Gemini 回傳錯誤 {resp.status_code}：{detail}'}), 502
         result = resp.json()['candidates'][0]['content']['parts'][0]['text']
         return jsonify({'analysis': result, 'trade_count': len(trades)})
     except Exception as e:
-        return jsonify({'error': f'AI 分析失敗：{str(e)}'}), 500
+        return jsonify({'error': f'AI 分析失敗：{type(e).__name__}: {e}'}), 500
 
 
 def migrate_table(conn, table_name, model_cols, is_pg):
