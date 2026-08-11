@@ -352,7 +352,9 @@
     background: linear-gradient(160deg, var(--bg2) 0%, var(--bg) 100%);
     border: 1px solid var(--border2); border-radius: 14px;
     padding: 30px; width: 100%; max-width: 560px; max-height: 90vh;
-    overflow-y: auto; position: relative;
+    /* 只寫 overflow-y: auto 時，另一軸的 visible 會被規範改成 auto，
+       modal 就能自己橫向捲動；必須明確關掉 */
+    overflow-y: auto; overflow-x: hidden; position: relative;
     box-shadow: 0 0 40px rgba(0,212,232,0.06), 0 20px 60px rgba(0,0,0,0.6);
   }
   .modal::before {
