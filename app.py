@@ -179,7 +179,10 @@ def me():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # 不帶快取標頭時瀏覽器會沿用舊頁面，部署後手機常常還是看到舊版樣式
+    resp = app.make_response(render_template('index.html'))
+    resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
+    return resp
 
 
 @app.route('/api/debug')

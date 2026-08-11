@@ -474,8 +474,11 @@
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
 
-    /* iOS 在字級小於 16px 的輸入框上會自動縮放整頁，聚焦時畫面會忽大忽小 */
+    /* iOS 在字級小於 16px 的輸入框上會自動縮放整頁，聚焦時畫面會忽大忽小。
+       下面幾條需要足夠的選擇器權重才蓋得過各自原本的設定 */
     input, select, textarea { font-size: 16px; }
+    .auth-form input { font-size: 16px; }
+    #month-select { font-size: 16px; }
   }
 
   @media (max-width: 480px) {
