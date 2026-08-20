@@ -2371,52 +2371,5 @@ function renderChart(period, btn) {
 }
 </script>
 
-<script>
-// 橫向溢出診斷：只在網址帶 ?debug=overflow 時啟用，用來找出撐寬畫面的元素
-if (new URLSearchParams(location.search).get('debug') === 'overflow') {
-  window.addEventListener('load', () => {
-    const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;top:0;left:0;right:0;max-height:55vh;overflow:auto;'
-      + 'background:#000;color:#0f0;font:11px/1.5 monospace;z-index:99999;padding:8px;'
-      + 'white-space:pre-wrap;border-bottom:2px solid #0f0';
-    const btn = document.createElement('button');
-    btn.textContent = '重新掃描';
-    btn.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:99999;padding:10px 16px;'
-      + 'background:#0f0;color:#000;border:none;border-radius:6px;font:bold 13px monospace';
-
-    function describe(el) {
-      let s = el.tagName.toLowerCase();
-      if (el.id) s += '#' + el.id;
-      if (typeof el.className === 'string' && el.className.trim()) {
-        s += '.' + el.className.trim().split(/\s+/).join('.');
-      }
-      return s;
-    }
-
-    function scan() {
-      const vw = document.documentElement.clientWidth;
-      const hits = [];
-      document.querySelectorAll('body *').forEach(el => {
-        const r = el.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) return;
-        if (r.right > vw + 1 || r.left < -1) {
-          hits.push(describe(el) + '  w=' + Math.round(r.width)
-            + ' L=' + Math.round(r.left) + ' R=' + Math.round(r.right));
-        }
-      });
-      box.textContent = 'viewport=' + vw
-        + '  scrollWidth=' + document.documentElement.scrollWidth
-        + '  bodyScrollWidth=' + document.body.scrollWidth
-        + '\n超出畫面的元素 (' + hits.length + ')：\n'
-        + (hits.slice(0, 25).join('\n') || '(沒找到)');
-    }
-
-    btn.onclick = scan;
-    document.body.appendChild(box);
-    document.body.appendChild(btn);
-    scan();
-  });
-}
-</script>
 </body>
 </html>
